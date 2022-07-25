@@ -1,0 +1,30 @@
+# System
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+Desktop.ini
+Thumbs.db
+ehthumbs.db
+
+# IDEs
+nbproject/
+.idea
+*.iml
+.vscode
+*.sublime-project
+*.sublime-workspace
+
+# Project
+*.egg-info/
+__pycache__
+.cache/
+.mypy_cache/
+.tox/
+.venv/
+.coverage
+dist/
+docs/_build/

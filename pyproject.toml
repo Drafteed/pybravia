@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "pybravia"
+version = "0.1.0"
+description = "Python async library for remote control of Sony Bravia TVs 2013 and newer."
+authors = ["Arem Draft <artemon_93@mail.ru>"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/Drafteed/pybravia"
+packages = [
+  { include = "pybravia" }
+]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+aiohttp = "*"
+
+[tool.poetry.dev-dependencies]
+pytest = "^5.2"
+pre-commit = "*"
+black = "*"
+isort = "*"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
