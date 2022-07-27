@@ -1,9 +1,12 @@
 import asyncio
+import logging
 import socket
 from base64 import b64encode
 from datetime import datetime, timedelta
 
 import aiohttp
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class BraviaTV:
@@ -26,6 +29,14 @@ class BraviaTV:
         self.connected = False
         self._psk = pin[4:] if pin and pin[:4] == "psk:" else psk
 
+        _LOGGER.debug(
+            "Connect with pin: %s, psk: %s, clientid: %s, nickname: %s",
+            pin,
+            psk,
+            clientid,
+            nickname,
+        )
+
         if self._psk:
             self.connected = True
         else:
@@ -34,6 +45,8 @@ class BraviaTV:
         if self.connected and self._wol is False:
             self.connected = await self.set_wol_mode(True)
             self._wol = True
+
+        _LOGGER.debug("Connect status: %s", self.connected)
 
         return self.connected
 
@@ -72,9 +85,9 @@ class BraviaTV:
             sock.sendto(packet, ("<broadcast>", 9))
         return True
 
-    async def send_req(self, url, data, headers=None, timeout=10, format="json"):
+    async def send_req(self, url, data, headers=None, timeout=10, output="json"):
         """Send HTTP request."""
-        result = {} if format == "json" else False
+        result = {} if output == "json" else False
 
         if not self._session:
             self._session = aiohttp.ClientSession(
@@ -87,8 +100,14 @@ class BraviaTV:
         if self._psk:
             headers["X-Auth-PSK"] = self._psk
 
+        _LOGGER.debug(
+            "Request %s, data: %s, headers: %s, output: %s", url, data, headers, output
+        )
+
         try:
-            if format == "json":
+            self._status = None
+
+            if output == "json":
                 response = await self._session.post(
                     url, json=data, headers=headers, timeout=timeout
                 )
@@ -100,10 +119,14 @@ class BraviaTV:
                 )
                 if response.status == 200:
                     result = True
+
             self._status = response.status
-        except aiohttp.ClientError:
+            _LOGGER.debug("Response status: %s, result: %s", self._status, result)
+        except aiohttp.ClientError as e:
+            _LOGGER.warning("Connection error", exc_info=e)
             pass
         except asyncio.exceptions.TimeoutError:
+            _LOGGER.warning("Timeout error")
             pass
 
         return result
