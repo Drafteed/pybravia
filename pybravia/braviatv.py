@@ -1,3 +1,4 @@
+"""Python library for remote control of Sony Bravia TV."""
 import asyncio
 import logging
 import socket
@@ -6,11 +7,13 @@ from datetime import datetime, timedelta
 
 import aiohttp
 
+from .exceptions import BraviaTVConnectionError, BraviaTVConnectionTimeout
+
 _LOGGER = logging.getLogger(__name__)
 
 
 class BraviaTV:
-    """Represent a Bravia TV client."""
+    """Represent a BraviaTV client."""
 
     def __init__(self, host, mac=None, session=None):
         """Initialize the device."""
@@ -24,7 +27,9 @@ class BraviaTV:
         self._session = session
         self._commands = {}
 
-    async def connect(self, pin=None, psk=False, clientid=None, nickname=None):
+    async def connect(
+        self, pin=None, psk=False, clientid=None, nickname=None, errors=False
+    ):
         """Connect to device with PIN or PSK."""
         self.connected = False
         self._psk = pin[4:] if pin and pin[:4] == "psk:" else psk
@@ -32,7 +37,7 @@ class BraviaTV:
         _LOGGER.debug(
             "Connect with pin: %s, psk: %s, clientid: %s, nickname: %s",
             pin,
-            psk,
+            self._psk,
             clientid,
             nickname,
         )
@@ -40,17 +45,19 @@ class BraviaTV:
         if self._psk:
             self.connected = True
         else:
-            self.connected = await self.register(pin, clientid, nickname)
+            self.connected = await self.register(pin, clientid, nickname, errors=errors)
 
         if self.connected and self._wol is False:
-            self.connected = await self.set_wol_mode(True)
-            self._wol = True
+            self.connected = await self.send_rest_quick(
+                "system", "setWolMode", {"enabled": True}, errors=errors
+            )
+            self._wol = self.connected
 
         _LOGGER.debug("Connect status: %s", self.connected)
 
         return self.connected
 
-    async def register(self, pin, clientid, nickname):
+    async def register(self, pin, clientid, nickname, errors=False):
         """Register the device with PIN."""
         b64pin = b64encode(f":{pin}".encode()).decode()
         headers = {"Authorization": f"Basic {b64pin}", "Connection": "keep-alive"}
@@ -59,13 +66,17 @@ class BraviaTV:
             [{"value": "yes", "function": "WOL"}],
         ]
         return await self.send_rest_quick(
-            "accessControl", "actRegister", params, headers
+            "accessControl",
+            "actRegister",
+            params,
+            headers,
+            errors=errors,
         )
 
-    async def pair(self, clientid=None, nickname=None):
+    async def pair(self, clientid=None, nickname=None, errors=False):
         """Register with PIN "0000" to start the pairing process on the TV."""
-        await self.register("0000", clientid, nickname)
-        return self._status == 200 or self._status == 401
+        await self.register("0000", clientid, nickname, errors=errors)
+        return self._status in [200, 401]
 
     async def disconnect(self):
         """Close connection."""
@@ -85,9 +96,11 @@ class BraviaTV:
             sock.sendto(packet, ("<broadcast>", 9))
         return True
 
-    async def send_req(self, url, data, headers=None, timeout=10, output="json"):
+    async def send_req(
+        self, url, data, headers=None, json=True, timeout=10, errors=False
+    ):
         """Send HTTP request."""
-        result = {} if output == "json" else False
+        result = {} if json else False
 
         if not self._session:
             self._session = aiohttp.ClientSession(
@@ -100,14 +113,12 @@ class BraviaTV:
         if self._psk:
             headers["X-Auth-PSK"] = self._psk
 
-        _LOGGER.debug(
-            "Request %s, data: %s, headers: %s, output: %s", url, data, headers, output
-        )
+        _LOGGER.debug("Request %s, data: %s, headers: %s", url, data, headers)
 
         try:
             self._status = None
 
-            if output == "json":
+            if json:
                 response = await self._session.post(
                     url, json=data, headers=headers, timeout=timeout
                 )
@@ -122,16 +133,16 @@ class BraviaTV:
 
             self._status = response.status
             _LOGGER.debug("Response status: %s, result: %s", self._status, result)
-        except aiohttp.ClientError as e:
-            _LOGGER.warning("Connection error", exc_info=e)
-            pass
+        except aiohttp.ClientError as err:
+            if errors:
+                raise BraviaTVConnectionError from err
         except asyncio.exceptions.TimeoutError:
-            _LOGGER.warning("Timeout error")
-            pass
+            if errors:
+                raise BraviaTVConnectionTimeout
 
         return result
 
-    async def send_ircc_req(self, code, timeout=10):
+    async def send_ircc_req(self, code, timeout=10, errors=False):
         """Send IRCC request to device."""
 
         # After about 13 minutes of inactivity, some TV`s
@@ -155,10 +166,17 @@ class BraviaTV:
             "<IRCCCode>" + code + "</IRCCCode></u:X_SendIRCC></s:Body></s:Envelope>"
         ).encode("UTF-8")
 
-        return await self.send_req(url, data, headers, timeout, "xml")
+        return await self.send_req(url, data, headers, False, timeout, errors)
 
     async def send_rest_req(
-        self, service, method, params=None, headers=None, timeout=10, version="1.0"
+        self,
+        service,
+        method,
+        params=None,
+        headers=None,
+        version="1.0",
+        timeout=10,
+        errors=False,
     ):
         """Send REST request to device."""
         url = f"http://{self.host}/sony/{service}"
@@ -170,14 +188,21 @@ class BraviaTV:
             "version": version,
         }
 
-        return await self.send_req(url, data, headers, timeout, "json")
+        return await self.send_req(url, data, headers, True, timeout, errors)
 
     async def send_rest_quick(
-        self, service, method, params=None, headers=None, timeout=10, version="1.0"
+        self,
+        service,
+        method,
+        params=None,
+        headers=None,
+        version="1.0",
+        timeout=10,
+        errors=False,
     ):
         """Send and quick check REST request to device."""
         resp = await self.send_rest_req(
-            service, method, params, headers, timeout, version
+            service, method, params, headers, version, timeout, errors
         )
         return "result" in resp
 
@@ -204,7 +229,9 @@ class BraviaTV:
     async def get_api_info(self, services):
         """Get supported services and their information."""
         resp = await self.send_rest_req(
-            "guide", "getSupportedApiInfo", {"services": services}
+            "guide",
+            "getSupportedApiInfo",
+            {"services": services},
         )
         result = resp.get("result", [{}])[0]
         return result
@@ -258,7 +285,9 @@ class BraviaTV:
     async def get_source_list(self, scheme="extInput"):
         """Get list of sources in the scheme."""
         resp = await self.send_rest_req(
-            "avContent", "getSourceList", {"scheme": scheme}
+            "avContent",
+            "getSourceList",
+            {"scheme": scheme},
         )
         result = resp.get("result", [[]])[0]
         return [d["source"] for d in result if "source" in d]
@@ -266,7 +295,9 @@ class BraviaTV:
     async def get_content_count(self, source):
         """Get count of contents in the source."""
         resp = await self.send_rest_req(
-            "avContent", "getContentCount", {"source": source}
+            "avContent",
+            "getContentCount",
+            {"source": source},
         )
         result = resp.get("result", [{}])[0]
         return result.get("count", 0)
@@ -300,9 +331,13 @@ class BraviaTV:
             result.extend(resp)
         return result
 
-    async def get_external_status(self):
+    async def get_external_status(self, version="1.0"):
         """Get information of all external input sources."""
-        resp = await self.send_rest_req("avContent", "getCurrentExternalInputsStatus")
+        resp = await self.send_rest_req(
+            "avContent",
+            "getCurrentExternalInputsStatus",
+            version=version,
+        )
         result = resp.get("result", [[]])[0]
         return result
 
@@ -341,29 +376,29 @@ class BraviaTV:
             return await self.send_rest_quick(
                 "system", "setPowerStatus", {"status": True}
             )
-        else:
-            return True
+        return True
 
     async def turn_off(self):
         """Turn off the device."""
         return await self.send_rest_quick("system", "setPowerStatus", {"status": False})
 
-    async def volume_up(self, target="speaker", step=1):
+    async def volume_up(self, target="speaker", step=1, ui_mode=None, version="1.0"):
         """Increase the volume."""
-        return await self.send_rest_quick(
-            "audio", "setAudioVolume", {"target": target, "volume": f"+{step}"}
-        )
+        level = f"+{step}"
+        return await self.volume_level(level, target, ui_mode, version=version)
 
-    async def volume_down(self, target="speaker", step=1):
+    async def volume_down(self, target="speaker", step=1, ui_mode=None, version="1.0"):
         """Decrease the volume."""
-        return await self.send_rest_quick(
-            "audio", "setAudioVolume", {"target": target, "volume": f"-{step}"}
-        )
+        level = f"-{step}"
+        return await self.volume_level(level, target, ui_mode, version=version)
 
-    async def volume_level(self, level, target="speaker"):
+    async def volume_level(self, level, target="speaker", ui_mode=None, version="1.0"):
         """Change the audio volume level."""
+        params = {"target": target, "volume": str(level)}
+        if ui_mode is not None:
+            params["ui"] = ui_mode
         return await self.send_rest_quick(
-            "audio", "setAudioVolume", {"target": target, "volume": str(level)}
+            "audio", "setAudioVolume", params, version=version
         )
 
     async def volume_mute(self, mute=None):

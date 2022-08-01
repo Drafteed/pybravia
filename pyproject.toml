@@ -20,6 +20,9 @@ pre-commit = "*"
 black = "*"
 isort = "*"
 
+[tool.isort]
+profile = "black"
+
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
