@@ -47,11 +47,14 @@ class BraviaTV:
         else:
             self.connected = await self.register(pin, clientid, nickname, errors=errors)
 
-        if self.connected and self._wol is False:
+        # Check that functions requiring authentication work
+        if self.connected:
             self.connected = await self.send_rest_quick(
-                "system", "setWolMode", {"enabled": True}, errors=errors
+                "system", "getSystemInformation", errors=errors
             )
-            self._wol = self.connected
+
+        if self.connected and self._wol is False:
+            self._wol = await self.set_wol_mode(True)
 
         _LOGGER.debug("Connect status: %s", self.connected)
 
