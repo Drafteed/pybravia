@@ -103,7 +103,7 @@ class BraviaTV:
 
         if not self._session:
             self._session = aiohttp.ClientSession(
-                cookie_jar=aiohttp.CookieJar(unsafe=True)
+                cookie_jar=aiohttp.CookieJar(unsafe=True, quote_cookie=False)
             )
 
         if not headers:
