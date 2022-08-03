@@ -7,7 +7,11 @@ from datetime import datetime, timedelta
 
 import aiohttp
 
-from .exceptions import BraviaTVConnectionError, BraviaTVConnectionTimeout
+from .exceptions import (
+    BraviaTVAuthError,
+    BraviaTVConnectionError,
+    BraviaTVConnectionTimeout,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -27,7 +31,7 @@ class BraviaTV:
         self._commands = {}
 
     async def connect(
-        self, pin=None, psk=False, clientid=None, nickname=None, errors=False
+        self, pin=None, psk=False, clientid=None, nickname=None, errors=True
     ):
         """Connect to device with PIN or PSK."""
         self.connected = False
@@ -72,9 +76,9 @@ class BraviaTV:
             errors=errors,
         )
 
-    async def pair(self, clientid=None, nickname=None, errors=False):
+    async def pair(self, clientid=None, nickname=None):
         """Register with PIN "0000" to start the pairing process on the TV."""
-        await self.register("0000", clientid, nickname, errors=errors)
+        await self.register("0000", clientid, nickname)
         return self._status in [200, 401]
 
     async def disconnect(self):
@@ -132,6 +136,9 @@ class BraviaTV:
 
             self._status = response.status
             _LOGGER.debug("Response status: %s, result: %s", self._status, result)
+
+            if errors and response.status in [200, 401]:
+                raise BraviaTVAuthError
         except aiohttp.ClientError as err:
             if errors:
                 raise BraviaTVConnectionError from err
