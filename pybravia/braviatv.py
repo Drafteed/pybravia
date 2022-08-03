@@ -137,14 +137,14 @@ class BraviaTV:
             self._status = response.status
             _LOGGER.debug("Response status: %s, result: %s", self._status, result)
 
-            if errors and response.status in [200, 401]:
+            if errors and response.status in [401, 403]:
                 raise BraviaTVAuthError
         except aiohttp.ClientError as err:
             if errors:
                 raise BraviaTVConnectionError from err
-        except asyncio.exceptions.TimeoutError:
+        except asyncio.exceptions.TimeoutError as err:
             if errors:
-                raise BraviaTVConnectionTimeout
+                raise BraviaTVConnectionTimeout from err
 
         return result
 
