@@ -20,7 +20,6 @@ class BraviaTV:
         self.host = host
         self.mac = mac
         self.connected = False
-        self._wol = False
         self._psk = None
         self._send_ircc_time = None
         self._status = None
@@ -47,11 +46,11 @@ class BraviaTV:
         else:
             self.connected = await self.register(pin, clientid, nickname, errors=errors)
 
-        if self.connected and self._wol is False:
+        # Check that functions requiring authentication work
+        if self.connected:
             self.connected = await self.send_rest_quick(
-                "system", "setWolMode", {"enabled": True}, errors=errors
+                "system", "getSystemInformation", errors=errors
             )
-            self._wol = self.connected
 
         _LOGGER.debug("Connect status: %s", self.connected)
 
