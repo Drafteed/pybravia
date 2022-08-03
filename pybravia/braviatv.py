@@ -20,7 +20,6 @@ class BraviaTV:
         self.host = host
         self.mac = mac
         self.connected = False
-        self._wol = False
         self._psk = None
         self._send_ircc_time = None
         self._status = None
@@ -52,9 +51,6 @@ class BraviaTV:
             self.connected = await self.send_rest_quick(
                 "system", "getSystemInformation", errors=errors
             )
-
-        if self.connected and self._wol is False:
-            self._wol = await self.set_wol_mode(True)
 
         _LOGGER.debug("Connect status: %s", self.connected)
 
