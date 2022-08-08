@@ -34,6 +34,9 @@ jobs:
       - name: "Order of imports (isort)"
         run: |
           poetry run pre-commit run isort --all-files
+      - name: "Typing checks (mypy)"
+        run: |
+          poetry run pre-commit run mypy --all-files
       - name: "Run trailing-whitespace"
         run: |
           poetry run pre-commit run trailing-whitespace --all-files
