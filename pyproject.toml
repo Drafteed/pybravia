@@ -15,11 +15,12 @@ python = "^3.8"
 aiohttp = "*"
 
 [tool.poetry.dev-dependencies]
-pytest = "^5.2"
-pre-commit = "*"
-mypy = "*"
-black = "*"
-isort = "*"
+pytest = "^7.1.2"
+pre-commit = "^2.20.0"
+mypy = "^0.971"
+black = "^22.6.0"
+isort = "^5.10.1"
+flake8 = "^5.0.4"
 
 [tool.isort]
 profile = "black"
