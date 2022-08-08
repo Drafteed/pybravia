@@ -164,10 +164,8 @@ class BraviaTV:
                 result = await response.json() if json else True
                 _LOGGER.debug("Response result: %s", result)
             if response.status == 404:
-                _LOGGER.debug("HTTP: Not found")
                 raise BraviaTVNotFound
             if response.status in [401, 403]:
-                _LOGGER.debug("HTTP: Forbidden")
                 raise BraviaTVAuthError
         except ClientError as err:
             _LOGGER.debug("Request error %s", err)
