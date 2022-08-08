@@ -9,6 +9,14 @@ class BraviaTVAuthError(BraviaTVError):
     """Raised to indicate auth error."""
 
 
+class BraviaTVNotFound(BraviaTVError):
+    """Raised to indicate not found error."""
+
+
+class BraviaTVNotSupported(BraviaTVError):
+    """Raised to indicate not supported error."""
+
+
 class BraviaTVConnectionError(BraviaTVError):
     """Raised to indicate connection error."""
 

@@ -1,6 +1,6 @@
 # pybravia
 
-<img src="https://img.shields.io/github/v/release/Drafteed/pybravia?color=red" alt="Latest release"> <img src="https://img.shields.io/github/workflow/status/Drafteed/pybravia/CI" alt="GitHub Workflow Status"> <img src="https://img.shields.io/github/license/Drafteed/pybravia" alt="MIT License"> <img src="https://img.shields.io/badge/code%20style-black-black" alt="Code style">
+<a href="https://pypi.org/project/pybravia/"><img src="https://img.shields.io/pypi/v/pybravia" alt="PyPi release"></a> <img src="https://img.shields.io/github/workflow/status/Drafteed/pybravia/CI" alt="GitHub Workflow Status"> <img src="https://img.shields.io/github/license/Drafteed/pybravia" alt="MIT License"> <img src="https://img.shields.io/badge/code%20style-black-black" alt="Code style">
 
 Python Bravia provides an easy-to-use async interface for controlling of Sony Bravia TVs 2013 and newer.
 
@@ -23,20 +23,19 @@ pip install pybravia
 ### With PSK (recommended)
 
 ```py
-from pybravia import BraviaTV
+from pybravia import BraviaTV, BraviaTVError
 
 async with BraviaTV("192.168.1.20") as client:
-    connected = await client.connect(psk="sony")
+    try:
+        connected = await client.connect(psk="sony")
 
-    if not connected:
+        info = await client.get_system_info()
+
+        print(info)
+
+        await client.volume_up()
+    except BraviaTVError:
         print("could not connect")
-        return
-
-    info = await client.get_system_info()
-
-    print(info)
-
-    await client.volume_up()
 ```
 
 ### With PIN code
@@ -47,7 +46,10 @@ async with BraviaTV("192.168.1.20") as client:
 from pybravia import BraviaTV
 
 async with BraviaTV("192.168.1.20") as client:
-    await client.pair("CLIENTID", "NICKNAME")
+    try:
+        await client.pair("CLIENTID", "NICKNAME")
+    except BraviaTVError:
+        print("could not connect")
 ```
 
 #### Connect and usage
@@ -56,17 +58,16 @@ async with BraviaTV("192.168.1.20") as client:
 from pybravia import BraviaTV
 
 async with BraviaTV("192.168.1.20") as client:
-    connected = await client.connect("PIN", "CLIENTID", "NICKNAME")
+    try:
+        connected = await client.connect("PIN", "CLIENTID", "NICKNAME")
 
-    if not connected:
+        info = await client.get_system_info()
+
+        print(info)
+
+        await client.volume_up()
+    except BraviaTVError:
         print("could not connect")
-        return
-
-    info = await client.get_system_info()
-
-    print(info)
-
-    await client.volume_up()
 ```
 
 ## Contributing
