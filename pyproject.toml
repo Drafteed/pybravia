@@ -17,6 +17,7 @@ aiohttp = "*"
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
 pre-commit = "*"
+mypy = "*"
 black = "*"
 isort = "*"
 

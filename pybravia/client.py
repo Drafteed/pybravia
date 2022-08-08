@@ -108,6 +108,7 @@ class BraviaTV:
         """Close connection."""
         if self._session:
             await self._session.close()
+            self._session = None
 
     async def send_wol_req(self) -> bool:
         """Send WOL packet to device."""
@@ -282,8 +283,8 @@ class BraviaTV:
         result = resp.get("result", [{}])[0]
         return result
 
-    async def get_remote_info(self) -> list:
-        """Get list of all IRCC commands."""
+    async def get_remote_info(self) -> list[Any]:
+        """Get information of the device's remote controller."""
         resp = await self.send_rest_req(SERVICE_SYSTEM, "getRemoteControllerInfo")
         result = resp.get("result", [{}, []])
         return result
@@ -302,7 +303,7 @@ class BraviaTV:
     async def get_volume_info(
         self, target: str = DEFAULT_AUDIO_TARGET
     ) -> dict[str, Any]:
-        """Get volume info with preferred target."""
+        """Get the sound volume information with preferred target."""
         result = await self.get_volume_info_full()
         value = {}
         for output in result:
