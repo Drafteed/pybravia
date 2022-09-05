@@ -177,6 +177,9 @@ class BraviaTV:
         except ClientError as err:
             _LOGGER.debug("Request error %s", err)
             raise BraviaTVConnectionError from err
+        except ConnectionError as err:
+            _LOGGER.debug("Connection error %s", err)
+            raise BraviaTVConnectionError from err
         except asyncio.exceptions.TimeoutError as err:
             _LOGGER.debug("Request timeout %s", err)
             raise BraviaTVConnectionTimeout from err
