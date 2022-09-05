@@ -4,13 +4,12 @@ from __future__ import annotations
 import asyncio
 import logging
 import socket
-from base64 import b64encode
 from contextlib import suppress
 from datetime import datetime, timedelta
 from types import TracebackType
 from typing import Any
 
-from aiohttp import ClientError, ClientSession, CookieJar
+from aiohttp import BasicAuth, ClientError, ClientSession, CookieJar
 
 from .const import (
     CODE_POWER_ON,
@@ -47,6 +46,7 @@ class BraviaTV:
         self.host = host
         self.mac = mac
         self._session = session
+        self._auth: BasicAuth | None = None
         self._psk: str | None = None
         self._send_ircc_time: datetime | None = None
         self._commands: dict[str, str] = {}
@@ -76,18 +76,23 @@ class BraviaTV:
             await self.register(pin, clientid, nickname)
         else:
             if self._session is not None:
+                self._auth = None
                 self._session.cookie_jar.clear()
 
         system_info = await self.get_system_info()
         if not system_info:
             raise BraviaTVNotSupported
 
-        _LOGGER.debug("Connected")
+        if self._psk:
+            _LOGGER.debug("Connected with PSK")
+        else:
+            _LOGGER.debug(
+                "Connected with PIN, cookie len: %s", len(self._session._cookie_jar)
+            )
 
     async def register(self, pin: str, clientid: str, nickname: str) -> None:
         """Register the device with PIN."""
-        b64pin = b64encode(f":{pin}".encode()).decode()
-        headers = {"Authorization": f"Basic {b64pin}"}
+        self._auth = BasicAuth("", pin)
         params = [
             {"clientid": clientid, "nickname": nickname, "level": "private"},
             [{"value": "yes", "function": "WOL"}],
@@ -96,7 +101,6 @@ class BraviaTV:
             SERVICE_ACCESS_CONTROL,
             "actRegister",
             params,
-            headers,
         )
 
     async def pair(self, clientid: str, nickname: str) -> None:
@@ -108,7 +112,9 @@ class BraviaTV:
         """Close connection."""
         if self._session:
             await self._session.close()
-            self._session = None
+        self._auth = None
+        self._psk = None
+        self._session = None
 
     async def send_wol_req(self) -> bool:
         """Send WOL packet to device."""
@@ -152,11 +158,11 @@ class BraviaTV:
         try:
             if json:
                 response = await self._session.post(
-                    url, json=data, headers=headers, timeout=timeout
+                    url, json=data, headers=headers, timeout=timeout, auth=self._auth
                 )
             else:
                 response = await self._session.post(
-                    url, data=data, headers=headers, timeout=timeout
+                    url, data=data, headers=headers, timeout=timeout, auth=self._auth
                 )
 
             _LOGGER.debug("Response status: %s", response.status)
