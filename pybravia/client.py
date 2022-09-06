@@ -32,6 +32,7 @@ from .exceptions import (
     BraviaTVNotFound,
     BraviaTVNotSupported,
 )
+from .util import normalize_cookies
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -166,6 +167,13 @@ class BraviaTV:
                 )
 
             _LOGGER.debug("Response status: %s", response.status)
+
+            # Normalize non RFC-compliant cookie
+            # https://github.com/Drafteed/pybravia/issues/1#issuecomment-1237452709
+            cookies = response.headers.get("set-cookie")
+            if cookies:
+                normalized_cookies = normalize_cookies(cookies)
+                self._session.cookie_jar.update_cookies(normalized_cookies)
 
             if response.status == 200:
                 result = await response.json() if json else True
