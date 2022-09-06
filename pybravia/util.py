@@ -1,4 +1,6 @@
 """BraviaTV utils and helpers."""
+from __future__ import annotations
+
 import re
 from http.cookies import SimpleCookie
 
