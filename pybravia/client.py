@@ -170,7 +170,7 @@ class BraviaTV:
 
             # Normalize non RFC-compliant cookie
             # https://github.com/Drafteed/pybravia/issues/1#issuecomment-1237452709
-            cookies = response.headers.get("set-cookie")
+            cookies = response.headers.getall("set-cookie", None)
             if cookies:
                 normalized_cookies = normalize_cookies(cookies)
                 self._session.cookie_jar.update_cookies(normalized_cookies)
