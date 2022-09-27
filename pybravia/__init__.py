@@ -8,6 +8,7 @@ from .exceptions import (
     BraviaTVError,
     BraviaTVNotFound,
     BraviaTVNotSupported,
+    BraviaTVTurnedOff,
 )
 
 __version__ = "0.2.2"

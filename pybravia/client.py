@@ -31,6 +31,7 @@ from .exceptions import (
     BraviaTVError,
     BraviaTVNotFound,
     BraviaTVNotSupported,
+    BraviaTVTurnedOff,
 )
 from .util import normalize_cookies
 
@@ -178,6 +179,10 @@ class BraviaTV:
             if response.status == 200:
                 result = await response.json() if json else True
                 _LOGGER.debug("Response result: %s", result)
+                if isinstance(result, dict) and "not power-on" in result.get(
+                    "error", []
+                ):
+                    raise BraviaTVTurnedOff
             if response.status == 404:
                 raise BraviaTVNotFound
             if response.status in [401, 403]:

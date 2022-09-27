@@ -23,3 +23,7 @@ class BraviaTVConnectionError(BraviaTVError):
 
 class BraviaTVConnectionTimeout(BraviaTVError):
     """Raised to indicate connection timeout."""
+
+
+class BraviaTVTurnedOff(BraviaTVError):
+    """Raised to indicate TV is turned off and do not respond."""
