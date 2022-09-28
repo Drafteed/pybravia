@@ -25,6 +25,7 @@ __pycache__
 .mypy_cache/
 .tox/
 .venv/
+venv/
 .coverage
 dist/
 docs/_build/
