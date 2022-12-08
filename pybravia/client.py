@@ -454,6 +454,12 @@ class BraviaTV:
             SERVICE_SYSTEM, "setPowerStatus", {"status": status}
         )
 
+    async def set_power_saving_mode(self, mode: str) -> bool:
+        """Change the setting of the power saving mode."""
+        return await self.send_rest_quick(
+            SERVICE_SYSTEM, "setPowerSavingMode", {"mode": mode}
+        )
+
     async def set_text_form(self, text: str) -> bool:
         """Input text on the field of the software keyboard."""
         return await self.send_rest_quick(SERVICE_APP_CONTROL, "setTextForm", text)
