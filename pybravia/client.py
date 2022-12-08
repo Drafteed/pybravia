@@ -454,6 +454,10 @@ class BraviaTV:
             SERVICE_SYSTEM, "setPowerStatus", {"status": status}
         )
 
+    async def set_text_form(self, text: str) -> bool:
+        """Input text on the field of the software keyboard."""
+        return await self.send_rest_quick(SERVICE_APP_CONTROL, "setTextForm", text)
+
     async def turn_on(self) -> bool:
         """Turn on the device."""
         await self.send_wol_req()
