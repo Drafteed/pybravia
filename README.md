@@ -1,6 +1,6 @@
 # pybravia
 
-<a href="https://pypi.org/project/pybravia/"><img src="https://img.shields.io/pypi/v/pybravia" alt="PyPi release"></a> <img src="https://img.shields.io/github/workflow/status/Drafteed/pybravia/CI" alt="GitHub Workflow Status"> <img src="https://img.shields.io/github/license/Drafteed/pybravia" alt="MIT License"> <img src="https://img.shields.io/badge/code%20style-black-black" alt="Code style">
+<a href="https://pypi.org/project/pybravia/"><img src="https://img.shields.io/pypi/v/pybravia" alt="PyPi release"></a> <img src="https://img.shields.io/github/actions/workflow/status/Drafteed/pybravia/ci.yml?branch=master" alt="GitHub Workflow Status"> <img src="https://img.shields.io/github/license/Drafteed/pybravia" alt="MIT License"> <img src="https://img.shields.io/badge/code%20style-black-black" alt="Code style">
 
 Python Bravia provides an easy-to-use async interface for controlling of Sony Bravia TVs 2013 and newer.
 
