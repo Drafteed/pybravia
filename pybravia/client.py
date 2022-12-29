@@ -467,10 +467,11 @@ class BraviaTV:
     async def turn_on(self) -> bool:
         """Turn on the device."""
         await self.send_wol_req()
-        with suppress(BraviaTVError):
-            if await self.get_power_status() != "active":
-                await self.send_ircc_req(CODE_POWER_ON)
+        if await self.get_power_status() != "active":
+            with suppress(BraviaTVError):
                 await self.set_power_status(True)
+            with suppress(BraviaTVError):
+                await self.send_ircc_req(CODE_POWER_ON)
         return True
 
     async def turn_off(self) -> bool:
