@@ -214,7 +214,7 @@ class BraviaTV:
                     await self.send_ircc_req("")
             self._send_ircc_time = time
 
-        url = f"http://{self.host}/sony/IRCC"
+        url = f"http://{self.host}/sony/ircc"
         headers = {
             "SOAPACTION": '"urn:schemas-sony-com:service:IRCC:1#X_SendIRCC"',
             "Content-Type": "text/xml; charset=UTF-8",
