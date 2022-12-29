@@ -276,6 +276,12 @@ class BraviaTV:
         result = resp.get("result", [{}])[0]
         return result.get("status", "off")
 
+    async def get_power_saving_mode(self) -> str:
+        """Get current power saving mode."""
+        resp = await self.send_rest_req(SERVICE_SYSTEM, "getPowerSavingMode")
+        result = resp.get("result", [{}])[0]
+        return result.get("mode", "")
+
     async def get_system_info(self) -> dict[str, str]:
         """Get general information of the device."""
         resp = await self.send_rest_req(SERVICE_SYSTEM, "getSystemInformation")
