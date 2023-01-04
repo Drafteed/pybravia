@@ -23,9 +23,9 @@ pip install pybravia
 ### With PSK (recommended)
 
 ```py
-from pybravia import BraviaTV, BraviaTVError
+from pybravia import BraviaClient, BraviaError
 
-async with BraviaTV("192.168.1.20") as client:
+async with BraviaClient("192.168.1.20") as client:
     try:
         connected = await client.connect(psk="sony")
 
@@ -34,7 +34,7 @@ async with BraviaTV("192.168.1.20") as client:
         print(info)
 
         await client.volume_up()
-    except BraviaTVError:
+    except BraviaError:
         print("could not connect")
 ```
 
@@ -43,21 +43,21 @@ async with BraviaTV("192.168.1.20") as client:
 #### Start pairing process and display PIN on the TV
 
 ```py
-from pybravia import BraviaTV
+from pybravia import BraviaClient, BraviaError
 
-async with BraviaTV("192.168.1.20") as client:
+async with BraviaClient("192.168.1.20") as client:
     try:
         await client.pair("CLIENTID", "NICKNAME")
-    except BraviaTVError:
+    except BraviaError:
         print("could not connect")
 ```
 
 #### Connect and usage
 
 ```py
-from pybravia import BraviaTV
+from pybravia import BraviaClient, BraviaError
 
-async with BraviaTV("192.168.1.20") as client:
+async with BraviaClient("192.168.1.20") as client:
     try:
         connected = await client.connect("PIN", "CLIENTID", "NICKNAME")
 
@@ -66,7 +66,7 @@ async with BraviaTV("192.168.1.20") as client:
         print(info)
 
         await client.volume_up()
-    except BraviaTVError:
+    except BraviaError:
         print("could not connect")
 ```
 

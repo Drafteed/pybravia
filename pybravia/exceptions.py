@@ -1,29 +1,29 @@
-"""BraviaTV exceptions."""
+"""Bravia exceptions."""
 
 
-class BraviaTVError(Exception):
-    """Base BraviaTV exception."""
+class BraviaError(Exception):
+    """Base Bravia exception."""
 
 
-class BraviaTVAuthError(BraviaTVError):
+class BraviaAuthError(BraviaError):
     """Raised to indicate auth error."""
 
 
-class BraviaTVNotFound(BraviaTVError):
+class BraviaNotFound(BraviaError):
     """Raised to indicate not found error."""
 
 
-class BraviaTVNotSupported(BraviaTVError):
+class BraviaNotSupported(BraviaError):
     """Raised to indicate not supported error."""
 
 
-class BraviaTVConnectionError(BraviaTVError):
+class BraviaConnectionError(BraviaError):
     """Raised to indicate connection error."""
 
 
-class BraviaTVConnectionTimeout(BraviaTVError):
+class BraviaConnectionTimeout(BraviaError):
     """Raised to indicate connection timeout."""
 
 
-class BraviaTVTurnedOff(BraviaTVError):
-    """Raised to indicate TV is turned off and do not respond."""
+class BraviaTurnedOff(BraviaError):
+    """Raised to indicate that TV is turned off and do not respond."""
