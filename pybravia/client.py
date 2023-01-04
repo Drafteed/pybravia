@@ -25,21 +25,21 @@ from .const import (
     SERVICE_SYSTEM,
 )
 from .exceptions import (
-    BraviaTVAuthError,
-    BraviaTVConnectionError,
-    BraviaTVConnectionTimeout,
-    BraviaTVError,
-    BraviaTVNotFound,
-    BraviaTVNotSupported,
-    BraviaTVTurnedOff,
+    BraviaAuthError,
+    BraviaConnectionError,
+    BraviaConnectionTimeout,
+    BraviaError,
+    BraviaNotFound,
+    BraviaNotSupported,
+    BraviaTurnedOff,
 )
 from .util import normalize_cookies
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class BraviaTV:
-    """Represent a BraviaTV client."""
+class BraviaClient:
+    """Represent a Bravia Client."""
 
     def __init__(
         self, host: str, mac: str | None = None, session: ClientSession | None = None
@@ -83,7 +83,7 @@ class BraviaTV:
 
         system_info = await self.get_system_info()
         if not system_info:
-            raise BraviaTVNotSupported
+            raise BraviaNotSupported
 
         if self._psk:
             _LOGGER.debug("Connected with PSK")
@@ -107,7 +107,7 @@ class BraviaTV:
 
     async def pair(self, clientid: str, nickname: str) -> None:
         """Register with PIN "0000" to start the pairing process on the TV."""
-        with suppress(BraviaTVAuthError):
+        with suppress(BraviaAuthError):
             await self.register(PAIR_PIN, clientid, nickname)
 
     async def disconnect(self) -> None:
@@ -179,23 +179,19 @@ class BraviaTV:
             if response.status == 200:
                 result = await response.json() if json else True
                 _LOGGER.debug("Response result: %s", result)
-                if isinstance(result, dict) and "not power-on" in result.get(
-                    "error", []
-                ):
-                    raise BraviaTVTurnedOff
             if response.status == 404:
-                raise BraviaTVNotFound
+                raise BraviaNotFound
             if response.status in [401, 403]:
-                raise BraviaTVAuthError
+                raise BraviaAuthError
         except ClientError as err:
             _LOGGER.debug("Request error %s", err)
-            raise BraviaTVConnectionError from err
+            raise BraviaConnectionError from err
         except ConnectionError as err:
             _LOGGER.debug("Connection error %s", err)
-            raise BraviaTVConnectionError from err
+            raise BraviaConnectionError from err
         except asyncio.exceptions.TimeoutError as err:
             _LOGGER.debug("Request timeout %s", err)
-            raise BraviaTVConnectionTimeout from err
+            raise BraviaConnectionTimeout from err
 
         return result
 
@@ -210,7 +206,7 @@ class BraviaTV:
             if self._send_ircc_time is None or (
                 time - self._send_ircc_time
             ) > timedelta(minutes=10):
-                with suppress(BraviaTVError):
+                with suppress(BraviaError):
                     await self.send_ircc_req("")
             self._send_ircc_time = time
 
@@ -254,9 +250,15 @@ class BraviaTV:
             "version": version,
         }
 
-        return await self.send_req(
+        resp = await self.send_req(
             url=url, data=data, headers=headers, json=True, timeout=timeout
         )
+
+        if error := resp.get("error"):
+            if "not power-on" in error:
+                raise BraviaTurnedOff
+
+        return resp
 
     async def send_rest_quick(self, *args: Any, **kwargs: Any) -> bool:
         """Send and quick check REST request to device."""
@@ -473,11 +475,11 @@ class BraviaTV:
     async def turn_on(self) -> bool:
         """Turn on the device."""
         await self.send_wol_req()
-        with suppress(BraviaTVError):
+        with suppress(BraviaError):
             if await self.get_power_status() != "active":
-                with suppress(BraviaTVError):
+                with suppress(BraviaError):
                     await self.set_power_status(True)
-                with suppress(BraviaTVError):
+                with suppress(BraviaError):
                     await self.send_ircc_req(CODE_POWER_ON)
         return True
 
@@ -555,7 +557,7 @@ class BraviaTV:
         """Send command to reboot the device."""
         return await self.send_rest_quick(SERVICE_SYSTEM, "requestReboot")
 
-    async def __aenter__(self) -> BraviaTV:
+    async def __aenter__(self) -> BraviaClient:
         """Connect the client with context manager."""
         return self
 
