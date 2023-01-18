@@ -22,6 +22,7 @@ from .const import (
     SERVICE_AUDIO,
     SERVICE_AV_CONTENT,
     SERVICE_GUIDE,
+    SERVICE_IRCC,
     SERVICE_SYSTEM,
 )
 from .exceptions import (
@@ -50,7 +51,8 @@ class BraviaClient:
         self._session = session
         self._auth: BasicAuth | None = None
         self._psk: str | None = None
-        self._send_ircc_time: datetime | None = None
+        self._ircc_time: datetime | None = None
+        self._ircc_endpoint = SERVICE_IRCC
         self._commands: dict[str, str] = {}
 
     async def connect(
@@ -198,19 +200,24 @@ class BraviaClient:
     async def send_ircc_req(self, code: str, timeout: int = DEFAULT_TIMEOUT) -> bool:
         """Send IRCC request to device."""
 
-        # After about 13 minutes of inactivity, some TV`s
+        # After about 13 minutes of inactivity, some TVs
         # ignores the first command without giving any error.
         # This make an empty request to 'wake up' the api.
+        # https://github.com/dcnielsen90/python-bravia-tv/issues/15
+        # The endpoint of some TVs is case sensitive, this also detects this.
+        # https://github.com/home-assistant/core/issues/86132
         if code != "":
             time = datetime.now()
-            if self._send_ircc_time is None or (
-                time - self._send_ircc_time
-            ) > timedelta(minutes=10):
-                with suppress(BraviaError):
+            if not self._ircc_time or (time - self._ircc_time) > timedelta(minutes=10):
+                try:
                     await self.send_ircc_req("")
-            self._send_ircc_time = time
+                except BraviaNotFound:
+                    self._ircc_endpoint = self._ircc_endpoint.swapcase()
+                except BraviaError:
+                    pass
+            self._ircc_time = time
 
-        url = f"http://{self.host}/sony/ircc"
+        url = f"http://{self.host}/sony/{self._ircc_endpoint}"
         headers = {
             "SOAPACTION": '"urn:schemas-sony-com:service:IRCC:1#X_SendIRCC"',
             "Content-Type": "text/xml; charset=UTF-8",
