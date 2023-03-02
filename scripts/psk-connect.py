@@ -16,11 +16,11 @@ async def test():
         try:
             connected = await client.connect(psk=psk)
 
-            info = await client.get_picture_setting("brightness")
+            info = await client.get_system_info()
 
             print(json.dumps(info))
 
-            await client.set_picture_setting("brightness", "50")
+            await client.volume_up()
         except BraviaError:
             print("could not connect")
             raise BraviaError
