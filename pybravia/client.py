@@ -24,6 +24,7 @@ from .const import (
     SERVICE_GUIDE,
     SERVICE_IRCC,
     SERVICE_SYSTEM,
+    SERVICE_VIDEO,
 )
 from .exceptions import (
     BraviaAuthError,
@@ -355,6 +356,14 @@ class BraviaClient:
         result = resp.get("result", [[]])[0]
         return result
 
+    async def get_picture_setting(self, target: str = "") -> list[dict[str, Any]]:
+        """Get information about the picture settings."""
+        resp = await self.send_rest_req(
+            SERVICE_VIDEO, "getPictureQualitySettings", {"target": target}
+        )
+        result = resp.get("result", [[]])[0]
+        return result
+
     async def get_app_list(self) -> list[dict[str, str]]:
         """Get list of applications."""
         resp = await self.send_rest_req(SERVICE_APP_CONTROL, "getApplicationList")
@@ -435,6 +444,15 @@ class BraviaClient:
         resp = await self.send_rest_req(SERVICE_AV_CONTENT, "getPlayingContentInfo")
         result = resp.get("result", [{}])[0]
         return result
+
+    async def set_picture_setting(self, target: str, value: str) -> bool:
+        """Set a picture setting to a new value."""
+        return await self.send_rest_req(
+            SERVICE_VIDEO,
+            "setPictureQualitySettings",
+            {"settings": [{"target": target, "value": value}]},
+            version="1.0",
+        )
 
     async def set_wol_mode(self, mode: bool) -> bool:
         """Set WOL mode settings of the device."""
