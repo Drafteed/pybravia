@@ -20,11 +20,11 @@ from .const import (
     SERVICE_ACCESS_CONTROL,
     SERVICE_APP_CONTROL,
     SERVICE_AUDIO,
-    SERVICE_VIDEO,
     SERVICE_AV_CONTENT,
     SERVICE_GUIDE,
     SERVICE_IRCC,
     SERVICE_SYSTEM,
+    SERVICE_VIDEO,
 )
 from .exceptions import (
     BraviaAuthError,
