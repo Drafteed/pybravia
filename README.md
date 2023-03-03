@@ -23,19 +23,34 @@ pip install pybravia
 ### With PSK (recommended)
 
 ```py
+import asyncio
+import logging
+
 from pybravia import BraviaClient, BraviaError
 
-async with BraviaClient("192.168.1.20") as client:
-    try:
-        connected = await client.connect(psk="sony")
+HOST = "192.168.1.20"
+PSK = "sony"
 
-        info = await client.get_system_info()
+logging.basicConfig(level=logging.DEBUG)
 
-        print(info)
 
-        await client.volume_up()
-    except BraviaError:
-        print("could not connect")
+async def main():
+    """Example of connect with PSK."""
+    async with BraviaClient(HOST) as client:
+        try:
+            connected = await client.connect(psk=PSK)
+            info = await client.get_system_info()
+
+            print(info)
+
+            await client.volume_up()
+        except BraviaError:
+            print("Could not connect")
+
+
+loop = asyncio.new_event_loop()
+loop.run_until_complete(main())
+loop.close()
 ```
 
 ### With PIN code
@@ -43,31 +58,65 @@ async with BraviaClient("192.168.1.20") as client:
 #### Start pairing process and display PIN on the TV
 
 ```py
+import asyncio
+import logging
+
 from pybravia import BraviaClient, BraviaError
 
-async with BraviaClient("192.168.1.20") as client:
-    try:
-        await client.pair("CLIENTID", "NICKNAME")
-    except BraviaError:
-        print("could not connect")
+HOST = "192.168.1.20"
+CLIENTID = "MyClientID"
+NICKNAME = "MyNicknameID"
+
+logging.basicConfig(level=logging.DEBUG)
+
+
+async def main():
+    """Pairing process initialization example."""
+    async with BraviaClient(HOST) as client:
+        try:
+            await client.pair(CLIENTID, NICKNAME)
+        except BraviaError:
+            print("Could not connect")
+
+
+loop = asyncio.new_event_loop()
+loop.run_until_complete(main())
+loop.close()
 ```
 
 #### Connect and usage
 
 ```py
+import asyncio
+import logging
+
 from pybravia import BraviaClient, BraviaError
 
-async with BraviaClient("192.168.1.20") as client:
-    try:
-        connected = await client.connect("PIN", "CLIENTID", "NICKNAME")
+HOST = "192.168.1.20"
+CLIENTID = "MyClientID"
+NICKNAME = "MyNicknameID"
+PIN = "2170"
 
-        info = await client.get_system_info()
+logging.basicConfig(level=logging.DEBUG)
 
-        print(info)
 
-        await client.volume_up()
-    except BraviaError:
-        print("could not connect")
+async def main():
+    """Example of connect with PIN."""
+    async with BraviaClient(HOST) as client:
+        try:
+            connected = await client.connect(PIN, CLIENTID, NICKNAME)
+            info = await client.get_system_info()
+
+            print(info)
+
+            await client.volume_up()
+        except BraviaError:
+            print("Could not connect")
+
+
+loop = asyncio.new_event_loop()
+loop.run_until_complete(main())
+loop.close()
 ```
 
 ## Contributing
