@@ -24,29 +24,18 @@ pip install pybravia
 
 ```py
 from pybravia import BraviaClient, BraviaError
-import asyncio
 
-async def test():
-    async with BraviaClient("192.168.1.20") as client:
-        try:
-            connected = await client.connect(psk="sony")
+async with BraviaClient("192.168.1.20") as client:
+    try:
+        connected = await client.connect(psk="sony")
 
-            info = await client.get_system_info()
+        info = await client.get_system_info()
 
-            print(info)
+        print(info)
 
-            await client.volume_up()
-        except BraviaError:
-            print("could not connect")
-            raise BraviaError
-
-def main():
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(test())
-    loop.close()
-
-if __name__ == '__main__':
-    main()
+        await client.volume_up()
+    except BraviaError:
+        print("could not connect")
 ```
 
 ### With PIN code
