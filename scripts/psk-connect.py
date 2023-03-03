@@ -11,10 +11,11 @@ psk = os.getenv("PSK")
 if psk is None:
     input('What is the Pre-Shared Key?\n')
 
+
 async def test():
     async with BraviaClient(ip_address) as client:
         try:
-            connected = await client.connect(psk=psk)
+            await client.connect(psk=psk)
 
             info = await client.get_system_info()
 
@@ -25,10 +26,12 @@ async def test():
             print("could not connect")
             raise BraviaError
 
+
 def main():
     loop = asyncio.get_event_loop()
     loop.run_until_complete(test())
     loop.close()
+
 
 if __name__ == '__main__':
     main()

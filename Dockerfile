@@ -7,6 +7,7 @@ WORKDIR /app/
 COPY pyproject.toml /app/pyproject.toml
 COPY poetry.lock /app/poetry.lock
 COPY README.md /app/README.md
+COPY .flake8 /app/.flake8
 
 COPY pybravia /app/pybravia
 
