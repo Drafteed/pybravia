@@ -358,7 +358,9 @@ class BraviaClient:
 
     async def get_picture_setting(self, target: str = "") -> list[dict[str, Any]]:
         """Get information about the picture settings."""
-        resp = await self.send_rest_req(SERVICE_VIDEO, "getPictureQualitySettings", {"target": target})
+        resp = await self.send_rest_req(
+            SERVICE_VIDEO, "getPictureQualitySettings", {"target": target}
+        )
         result = resp.get("result", [[]])[0]
         return result
 
