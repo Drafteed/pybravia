@@ -448,7 +448,7 @@ class BraviaClient:
         return await self.send_rest_req(
             SERVICE_VIDEO,
             "setPictureQualitySettings",
-            {"settings": [{"target": target, "value": str(value)}]},
+            {"settings": [{"target": target, "value": value}]},
             version="1.0",
         )
 
