@@ -449,7 +449,7 @@ class BraviaClient:
         result = resp.get("result", [{}])[0]
         return result
 
-    async def set_picture_setting(self, target: str, value: str | None = None) -> bool:
+    async def set_picture_setting(self, target: str, value: str) -> bool:
         """Set a picture setting to a new value."""
         return await self.send_rest_req(
             SERVICE_VIDEO,
