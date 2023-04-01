@@ -20,6 +20,6 @@
 		}
 	},
 
-    // Install all dependencies after container is created
+	// Install all dependencies after container is created
 	"postCreateCommand": "pip install -r requirements-dev.txt && poetry install --no-interaction"
 }
