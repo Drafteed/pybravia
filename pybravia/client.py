@@ -388,10 +388,14 @@ class BraviaClient:
 
     async def get_content_count(self, source: str) -> int:
         """Get count of contents in the source."""
+
+        # Extended timeout due to
+        # https://github.com/home-assistant/core/issues/91781#issuecomment-1532151925
         resp = await self.send_rest_req(
             SERVICE_AV_CONTENT,
             "getContentCount",
             {"source": source},
+            timeout=20,
         )
         result = resp.get("result", [{}])[0]
         return result.get("count", 0)
@@ -400,10 +404,14 @@ class BraviaClient:
         self, source: str, index: int = 0, count: int = 50
     ) -> list[dict[str, Any]]:
         """Get list of contents in the source."""
+
+        # Extended timeout due to
+        # https://github.com/home-assistant/core/issues/91781#issuecomment-1532168838
         resp = await self.send_rest_req(
             SERVICE_AV_CONTENT,
             "getContentList",
             {"source": source, "stIdx": index, "cnt": count},
+            timeout=20,
         )
         result = resp.get("result", [[]])[0]
         return result
