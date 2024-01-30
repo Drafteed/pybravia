@@ -280,6 +280,17 @@ class BraviaClient:
             return False
         return await self.send_ircc_req(code)
 
+    async def get_sound_settings(self) -> str:
+        """Get current sound output."""
+        resp = await self.send_rest_req(
+            SERVICE_AUDIO,
+            "getSoundSettings",
+            {"target": "outputTerminal"},
+            version="1.1",
+        )
+        result = resp.get("result", [[{}]])[0][0]
+        return result.get("currentValue", "")
+
     async def get_power_status(self) -> str:
         """Get current power status."""
         resp = await self.send_rest_req(SERVICE_SYSTEM, "getPowerStatus", timeout=5)
@@ -487,6 +498,15 @@ class BraviaClient:
         """Play content by URI."""
         return await self.send_rest_quick(
             SERVICE_AV_CONTENT, "setPlayContent", {"uri": uri}
+        )
+
+    async def set_sound_settings(self, output: str) -> bool:
+        """Change current sound output."""
+        return await self.send_rest_quick(
+            SERVICE_AUDIO,
+            "setSoundSettings",
+            [{"settings": [{"value": output, "target": "outputTerminal"}]}],
+            version="1.1",
         )
 
     async def set_power_status(self, status: bool) -> bool:
