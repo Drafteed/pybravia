@@ -177,7 +177,9 @@ class BraviaClient:
             cookies = response.headers.getall("set-cookie", None)
             if cookies:
                 normalized_cookies = normalize_cookies(cookies)
-                self._session.cookie_jar.update_cookies(cookies=normalized_cookies, response_url=response.url)
+                self._session.cookie_jar.update_cookies(
+                    cookies=normalized_cookies, response_url=response.url
+                )
 
             if response.status == 200:
                 result = await response.json() if json else True
