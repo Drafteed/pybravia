@@ -35,7 +35,7 @@ from .exceptions import (
     BraviaNotSupported,
     BraviaTurnedOff,
 )
-from .util import normalize_cookies
+from .util import deep_redact, normalize_cookies
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -66,13 +66,10 @@ class BraviaClient:
         """Connect to device with PIN or PSK."""
         self._psk = pin[4:] if pin and pin[:4] == "psk:" else psk
 
-        _LOGGER.debug(
-            "Connect with pin: %s, psk: %s, clientid: %s, nickname: %s",
-            pin,
-            self._psk,
-            clientid,
-            nickname,
-        )
+        if self._psk:
+            _LOGGER.debug("Connecting with PSK")
+        else:
+            _LOGGER.debug("Connecting with PIN")
 
         if self._psk is None:
             assert pin is not None
@@ -158,7 +155,12 @@ class BraviaClient:
         headers["Cache-Control"] = "no-cache"
         headers["Connection"] = "keep-alive"
 
-        _LOGGER.debug("Request %s, data: %s, headers: %s", url, data, headers)
+        _LOGGER.debug(
+            "Request %s, data: %s, headers: %s",
+            url,
+            data,
+            deep_redact(headers, ["X-Auth-PSK"]),
+        )
 
         try:
             if json:
@@ -183,7 +185,10 @@ class BraviaClient:
 
             if response.status == 200:
                 result = await response.json() if json else True
-                _LOGGER.debug("Response result: %s", result)
+                _LOGGER.debug(
+                    "Response result: %s",
+                    deep_redact(result, ["cid", "serial", "macAddr"]),
+                )
             if response.status == 404:
                 raise BraviaNotFound
             if response.status in [401, 403]:
