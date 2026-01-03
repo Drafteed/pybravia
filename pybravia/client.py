@@ -44,12 +44,19 @@ class BraviaClient:
     """Represent a Bravia Client."""
 
     def __init__(
-        self, host: str, mac: str | None = None, session: ClientSession | None = None
+        self,
+        host: str,
+        mac: str | None = None,
+        session: ClientSession | None = None,
+        ssl: bool = False,
+        ssl_verify: bool | None = None,
     ) -> None:
         """Initialize the device."""
         self.host = host
         self.mac = mac
         self._session = session
+        self._protocol = "https" if ssl else "http"
+        self._ssl_verify = ssl_verify
         self._auth: BasicAuth | None = None
         self._psk: str | None = None
         self._ircc_time: datetime | None = None
@@ -165,11 +172,21 @@ class BraviaClient:
         try:
             if json:
                 response = await self._session.post(
-                    url, json=data, headers=headers, timeout=timeout, auth=self._auth
+                    url,
+                    json=data,
+                    headers=headers,
+                    timeout=timeout,
+                    auth=self._auth,
+                    ssl=self._ssl_verify,
                 )
             else:
                 response = await self._session.post(
-                    url, data=data, headers=headers, timeout=timeout, auth=self._auth
+                    url,
+                    data=data,
+                    headers=headers,
+                    timeout=timeout,
+                    auth=self._auth,
+                    ssl=self._ssl_verify,
                 )
 
             _LOGGER.debug("Response status: %s", response.status)
@@ -225,7 +242,7 @@ class BraviaClient:
                     pass
             self._ircc_time = time
 
-        url = f"http://{self.host}/sony/{self._ircc_endpoint}"
+        url = f"{self._protocol}://{self.host}/sony/{self._ircc_endpoint}"
         headers = {
             "SOAPACTION": '"urn:schemas-sony-com:service:IRCC:1#X_SendIRCC"',
             "Content-Type": "text/xml; charset=UTF-8",
@@ -256,7 +273,7 @@ class BraviaClient:
         timeout: int = DEFAULT_TIMEOUT,
     ) -> Any:
         """Send REST request to device."""
-        url = f"http://{self.host}/sony/{service}"
+        url = f"{self._protocol}://{self.host}/sony/{service}"
         params = params if isinstance(params, list) else [params] if params else []
         data = {
             "method": method,
