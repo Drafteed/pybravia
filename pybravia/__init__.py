@@ -1,5 +1,5 @@
 """Python library for remote control of Sony Bravia TV."""
-# flake8: noqa
+
 from .client import BraviaClient
 from .exceptions import (
     BraviaAuthError,
@@ -11,4 +11,13 @@ from .exceptions import (
     BraviaTurnedOff,
 )
 
-__version__ = "0.3.4"
+__all__ = [
+    "BraviaClient",
+    "BraviaAuthError",
+    "BraviaConnectionError",
+    "BraviaConnectionTimeout",
+    "BraviaError",
+    "BraviaNotFound",
+    "BraviaNotSupported",
+    "BraviaTurnedOff",
+]
