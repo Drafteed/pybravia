@@ -206,7 +206,7 @@ class BraviaClient:
                     "Response result: %s",
                     deep_redact(result, ["cid", "serial", "macAddr"]),
                 )
-            elif status is HTTPStatus.NOT_FOUND:
+            elif status == HTTPStatus.NOT_FOUND:
                 raise BraviaNotFound
             elif status in (HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN):
                 raise BraviaAuthError
