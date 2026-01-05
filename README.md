@@ -1,6 +1,6 @@
 # pybravia
 
-<a href="https://pypi.org/project/pybravia/"><img src="https://img.shields.io/pypi/v/pybravia" alt="PyPi release"></a> <img src="https://img.shields.io/github/actions/workflow/status/Drafteed/pybravia/ci.yml?branch=master" alt="GitHub Workflow Status"> <img src="https://img.shields.io/github/license/Drafteed/pybravia" alt="MIT License"> <img src="https://img.shields.io/badge/code%20style-black-black" alt="Code style">
+<a href="https://pypi.org/project/pybravia/"><img src="https://img.shields.io/pypi/v/pybravia" alt="PyPi release"></a> <img src="https://img.shields.io/github/actions/workflow/status/Drafteed/pybravia/ci.yml?branch=master" alt="GitHub Workflow Status"> <img src="https://img.shields.io/github/license/Drafteed/pybravia" alt="MIT License">
 
 Python Bravia provides an easy-to-use async interface for controlling of Sony Bravia TVs 2013 and newer.
 
@@ -10,7 +10,7 @@ For more information, take a look at [BRAVIA Professional Display Knowledge Cent
 
 ## Requirements
 
-This library supports Python 3.8 and higher.
+This library supports Python 3.10 and higher.
 
 ## Installation
 
@@ -119,10 +119,6 @@ loop.run_until_complete(main())
 loop.close()
 ```
 
-## Contributing
-
-See an issue? Have something to add? Issues and pull requests are accepted in this repository.
-
 ## License
 
-This project is released under the MIT License. Refer to the LICENSE file for details.
+[The MIT License (MIT)](LICENSE)

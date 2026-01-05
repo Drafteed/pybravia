@@ -1,4 +1,5 @@
 """Python library for remote control of Sony Bravia TV."""
+
 from __future__ import annotations
 
 import asyncio
@@ -6,10 +7,11 @@ import logging
 import socket
 from contextlib import suppress
 from datetime import datetime, timedelta
+from http import HTTPStatus
 from types import TracebackType
 from typing import Any
 
-from aiohttp import BasicAuth, ClientError, ClientSession, CookieJar
+from aiohttp import BasicAuth, ClientError, ClientSession, ClientTimeout, CookieJar
 
 from .const import (
     CODE_POWER_ON,
@@ -49,7 +51,7 @@ class BraviaClient:
         mac: str | None = None,
         session: ClientSession | None = None,
         ssl: bool = False,
-        ssl_verify: bool | None = None,
+        ssl_verify: bool = False,
     ) -> None:
         """Initialize the device."""
         self.host = host
@@ -83,10 +85,9 @@ class BraviaClient:
             assert clientid is not None
             assert nickname is not None
             await self.register(pin, clientid, nickname)
-        else:
-            if self._session is not None:
-                self._auth = None
-                self._session.cookie_jar.clear()
+        elif self._session is not None:
+            self._auth = None
+            self._session.cookie_jar.clear()
 
         system_info = await self.get_system_info()
         if not system_info:
@@ -96,7 +97,8 @@ class BraviaClient:
             _LOGGER.debug("Connected with PSK")
         else:
             _LOGGER.debug(
-                "Connected with PIN, cookie len: %s", len(self._session._cookie_jar)
+                "Connected with PIN, cookie len: %s",
+                len(self._session._cookie_jar),  # type: ignore[union-attr]
             )
 
     async def register(self, pin: str, clientid: str, nickname: str) -> None:
@@ -146,11 +148,11 @@ class BraviaClient:
         timeout: int = DEFAULT_TIMEOUT,
     ) -> Any:
         """Send HTTP request."""
-        result = {} if json else False
+        result: Any = {} if json else False
 
         if self._session is None:
             self._session = ClientSession(
-                cookie_jar=CookieJar(unsafe=True, quote_cookie=False)
+                cookie_jar=CookieJar(unsafe=True, quote_cookie=False),
             )
 
         if headers is None:
@@ -170,26 +172,23 @@ class BraviaClient:
         )
 
         try:
-            if json:
-                response = await self._session.post(
-                    url,
-                    json=data,
-                    headers=headers,
-                    timeout=timeout,
-                    auth=self._auth,
-                    ssl=self._ssl_verify,
-                )
-            else:
-                response = await self._session.post(
-                    url,
-                    data=data,
-                    headers=headers,
-                    timeout=timeout,
-                    auth=self._auth,
-                    ssl=self._ssl_verify,
-                )
+            post_kwargs: dict[str, Any] = dict(
+                url=url,
+                headers=headers,
+                timeout=ClientTimeout(total=timeout),
+                auth=self._auth,
+                ssl=self._ssl_verify,
+            )
 
-            _LOGGER.debug("Response status: %s", response.status)
+            if json:
+                post_kwargs["json"] = data
+            else:
+                post_kwargs["data"] = data
+
+            response = await self._session.post(**post_kwargs)
+            status = HTTPStatus(response.status)
+
+            _LOGGER.debug("Response status: %s", status)
 
             # Normalize non RFC-compliant cookie
             # https://github.com/Drafteed/pybravia/issues/1#issuecomment-1237452709
@@ -197,18 +196,19 @@ class BraviaClient:
             if cookies:
                 normalized_cookies = normalize_cookies(cookies)
                 self._session.cookie_jar.update_cookies(
-                    cookies=normalized_cookies, response_url=response.url
+                    cookies=normalized_cookies,
+                    response_url=response.url,
                 )
 
-            if response.status == 200:
+            if status is HTTPStatus.OK:
                 result = await response.json() if json else True
                 _LOGGER.debug(
                     "Response result: %s",
                     deep_redact(result, ["cid", "serial", "macAddr"]),
                 )
-            if response.status == 404:
+            elif status is HTTPStatus.NOT_FOUND:
                 raise BraviaNotFound
-            if response.status in [401, 403]:
+            elif status in (HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN):
                 raise BraviaAuthError
         except ClientError as err:
             _LOGGER.debug("Request error %s", err)
@@ -224,7 +224,6 @@ class BraviaClient:
 
     async def send_ircc_req(self, code: str, timeout: int = DEFAULT_TIMEOUT) -> bool:
         """Send IRCC request to device."""
-
         # After about 13 minutes of inactivity, some TVs
         # ignores the first command without giving any error.
         # This make an empty request to 'wake up' the api.
@@ -260,7 +259,11 @@ class BraviaClient:
         )
 
         return await self.send_req(
-            url=url, data=data, headers=headers, json=False, timeout=timeout
+            url=url,
+            data=data,
+            headers=headers,
+            json=False,
+            timeout=timeout,
         )
 
     async def send_rest_req(
@@ -283,7 +286,11 @@ class BraviaClient:
         }
 
         resp = await self.send_req(
-            url=url, data=data, headers=headers, json=True, timeout=timeout
+            url=url,
+            data=data,
+            headers=headers,
+            json=True,
+            timeout=timeout,
         )
 
         if error := resp.get("error"):
@@ -374,7 +381,8 @@ class BraviaClient:
         return self._commands.get(command)
 
     async def get_volume_info(
-        self, target: str = DEFAULT_AUDIO_TARGET
+        self,
+        target: str = DEFAULT_AUDIO_TARGET,
     ) -> dict[str, Any]:
         """Get the sound volume information with preferred target."""
         result = await self.get_volume_info_full()
@@ -394,7 +402,9 @@ class BraviaClient:
     async def get_picture_setting(self, target: str = "") -> list[dict[str, Any]]:
         """Get information about the picture settings."""
         resp = await self.send_rest_req(
-            SERVICE_VIDEO, "getPictureQualitySettings", {"target": target}
+            SERVICE_VIDEO,
+            "getPictureQualitySettings",
+            {"target": target},
         )
         result = resp.get("result", [[]])[0]
         return result
@@ -423,7 +433,6 @@ class BraviaClient:
 
     async def get_content_count(self, source: str) -> int:
         """Get count of contents in the source."""
-
         # Extended timeout due to
         # https://github.com/home-assistant/core/issues/91781#issuecomment-1532151925
         resp = await self.send_rest_req(
@@ -436,10 +445,12 @@ class BraviaClient:
         return result.get("count", 0)
 
     async def get_content_list(
-        self, source: str, index: int = 0, count: int = 50
+        self,
+        source: str,
+        index: int = 0,
+        count: int = 50,
     ) -> list[dict[str, Any]]:
         """Get list of contents in the source."""
-
         # Extended timeout due to
         # https://github.com/home-assistant/core/issues/91781#issuecomment-1532168838
         resp = await self.send_rest_req(
@@ -471,7 +482,8 @@ class BraviaClient:
         return result
 
     async def get_external_status(
-        self, version: str = DEFAULT_VERSION
+        self,
+        version: str = DEFAULT_VERSION,
     ) -> list[dict[str, Any]]:
         """Get information of all external input sources."""
         resp = await self.send_rest_req(
@@ -500,7 +512,9 @@ class BraviaClient:
     async def set_wol_mode(self, mode: bool) -> bool:
         """Set WOL mode settings of the device."""
         return await self.send_rest_quick(
-            SERVICE_SYSTEM, "setWolMode", {"enabled": mode}
+            SERVICE_SYSTEM,
+            "setWolMode",
+            {"enabled": mode},
         )
 
     async def set_led_status(self, mode: str, status: str | None = None) -> bool:
@@ -515,13 +529,17 @@ class BraviaClient:
     async def set_active_app(self, uri: str) -> bool:
         """Launch an application by URI."""
         return await self.send_rest_quick(
-            SERVICE_APP_CONTROL, "setActiveApp", {"uri": uri}
+            SERVICE_APP_CONTROL,
+            "setActiveApp",
+            {"uri": uri},
         )
 
     async def set_play_content(self, uri: str) -> bool:
         """Play content by URI."""
         return await self.send_rest_quick(
-            SERVICE_AV_CONTENT, "setPlayContent", {"uri": uri}
+            SERVICE_AV_CONTENT,
+            "setPlayContent",
+            {"uri": uri},
         )
 
     async def set_sound_settings(self, output: str) -> bool:
@@ -536,13 +554,17 @@ class BraviaClient:
     async def set_power_status(self, status: bool) -> bool:
         """Change the current power status of the device."""
         return await self.send_rest_quick(
-            SERVICE_SYSTEM, "setPowerStatus", {"status": status}
+            SERVICE_SYSTEM,
+            "setPowerStatus",
+            {"status": status},
         )
 
     async def set_power_saving_mode(self, mode: str) -> bool:
         """Change the setting of the power saving mode."""
         return await self.send_rest_quick(
-            SERVICE_SYSTEM, "setPowerSavingMode", {"mode": mode}
+            SERVICE_SYSTEM,
+            "setPowerSavingMode",
+            {"mode": mode},
         )
 
     async def set_text_form(self, text: str) -> bool:
@@ -586,7 +608,10 @@ class BraviaClient:
         if ui_mode is not None:
             params["ui"] = ui_mode
         return await self.send_rest_quick(
-            SERVICE_AUDIO, "setAudioVolume", params, version=version
+            SERVICE_AUDIO,
+            "setAudioVolume",
+            params,
+            version=version,
         )
 
     async def volume_mute(self, mute: bool | None = None) -> bool:
@@ -595,7 +620,9 @@ class BraviaClient:
             volume_info = await self.get_volume_info()
             mute = not volume_info.get("mute")
         return await self.send_rest_quick(
-            SERVICE_AUDIO, "setAudioMute", {"status": mute}
+            SERVICE_AUDIO,
+            "setAudioMute",
+            {"status": mute},
         )
 
     async def play(self) -> bool:
@@ -639,7 +666,10 @@ class BraviaClient:
         return self
 
     async def __aexit__(
-        self, exc_type: Exception, exc_value: str, traceback: TracebackType
+        self,
+        exc_type: Exception,
+        exc_value: str,
+        traceback: TracebackType,
     ) -> None:
         """Disconnect from context manager."""
         await self.disconnect()

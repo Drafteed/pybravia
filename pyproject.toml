@@ -1,30 +1,38 @@
-[tool.poetry]
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
 name = "pybravia"
-version = "0.3.4"
+version = "0.4.0"
+license = {text = "MIT"}
 description = "Python async library for remote control of Sony Bravia TVs 2013 and newer."
-authors = ["Arem Draft <artemon_93@mail.ru>"]
-license = "MIT"
 readme = "README.md"
-repository = "https://github.com/Drafteed/pybravia"
-packages = [
-  { include = "pybravia" }
+authors = [{name = "Artem Draft"}]
+requires-python = ">=3.10"
+dependencies = [
+  "aiohttp>=3.8",
 ]
 
-[tool.poetry.dependencies]
-python = "^3.8"
-aiohttp = "*"
+[dependency-groups]
+dev = [
+  "ruff==0.14.10",
+  "pre-commit==4.5.1",
+  "mypy==1.19.1",
+]
 
-[tool.poetry.dev-dependencies]
-pytest = "^7.2.0"
-pre-commit = "^2.20.0"
-mypy = "^0.991"
-black = "^22.10.0"
-isort = "^5.10.1"
-flake8 = "^5.0.4"
+[tool.ruff]
+line-length = 88
 
-[tool.isort]
-profile = "black"
+[tool.ruff.lint]
+extend-select = [
+  "E",   # pycodestyle
+  "F",   # pyflakes
+  "I",   # isort
+  "B",   # bugbear
+  "UP",  # pyupgrade
+]
+fixable = ["ALL"]
 
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+[tool.ruff.format]
+quote-style = "double"
