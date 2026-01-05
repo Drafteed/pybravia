@@ -10,9 +10,9 @@ from datetime import datetime, timedelta
 from http import HTTPStatus
 from types import TracebackType
 from typing import Any
-from yarl import URL
 
 from aiohttp import BasicAuth, ClientError, ClientSession, ClientTimeout, CookieJar
+from yarl import URL
 
 from .const import (
     CODE_POWER_ON,
