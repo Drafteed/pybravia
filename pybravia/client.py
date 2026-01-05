@@ -200,7 +200,7 @@ class BraviaClient:
                     response_url=response.url,
                 )
 
-            if status is HTTPStatus.OK:
+            if status == HTTPStatus.OK:
                 result = await response.json() if json else True
                 _LOGGER.debug(
                     "Response result: %s",
