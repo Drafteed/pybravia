@@ -205,13 +205,13 @@ class BraviaClient:
                     response_url=response.url,
                 )
 
-            if status is HTTPStatus.OK:
+            if status == HTTPStatus.OK:
                 result = await response.json() if json else True
                 _LOGGER.debug(
                     "Response result: %s",
                     deep_redact(result, ["cid", "serial", "macAddr"]),
                 )
-            elif status is HTTPStatus.NOT_FOUND:
+            elif status == HTTPStatus.NOT_FOUND:
                 raise BraviaNotFound
             elif status in (HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN):
                 raise BraviaAuthError
