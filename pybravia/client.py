@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from http import HTTPStatus
 from types import TracebackType
 from typing import Any
+from yarl import URL
 
 from aiohttp import BasicAuth, ClientError, ClientSession, ClientTimeout, CookieJar
 
@@ -57,7 +58,7 @@ class BraviaClient:
         self.host = host
         self.mac = mac
         self._session = session
-        self._protocol = "https" if ssl else "http"
+        self._base_url = URL.build(scheme="https" if ssl else "http", host=host)
         self._ssl_verify = ssl_verify
         self._auth: BasicAuth | None = None
         self._psk: str | None = None
@@ -141,7 +142,7 @@ class BraviaClient:
 
     async def send_req(
         self,
-        url: str,
+        url: URL,
         data: Any = None,
         headers: dict[str, Any] | None = None,
         json: bool = True,
@@ -241,7 +242,7 @@ class BraviaClient:
                     pass
             self._ircc_time = time
 
-        url = f"{self._protocol}://{self.host}/sony/{self._ircc_endpoint}"
+        url = self._base_url / "sony" / self._ircc_endpoint
         headers = {
             "SOAPACTION": '"urn:schemas-sony-com:service:IRCC:1#X_SendIRCC"',
             "Content-Type": "text/xml; charset=UTF-8",
@@ -276,7 +277,7 @@ class BraviaClient:
         timeout: int = DEFAULT_TIMEOUT,
     ) -> Any:
         """Send REST request to device."""
-        url = f"{self._protocol}://{self.host}/sony/{service}"
+        url = self._base_url / "sony" / service
         params = params if isinstance(params, list) else [params] if params else []
         data = {
             "method": method,

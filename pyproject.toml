@@ -12,6 +12,7 @@ authors = [{name = "Artem Draft"}]
 requires-python = ">=3.10"
 dependencies = [
   "aiohttp>=3.8",
+  "yarl",
 ]
 
 [dependency-groups]
