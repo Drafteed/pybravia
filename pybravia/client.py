@@ -134,10 +134,14 @@ class BraviaClient:
         mac = self.mac.replace(":", "")
         packet = bytes.fromhex("F" * 12 + mac * 16)
 
+        await asyncio.to_thread(self._send_wol_packet, packet)
+        return True
+
+    def _send_wol_packet(self, packet: bytes) -> None:
+        """Send WOL packet synchronously (runs in thread pool)."""
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
             sock.sendto(packet, ("<broadcast>", 9))
-        return True
 
     async def send_req(
         self,
