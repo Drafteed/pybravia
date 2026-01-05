@@ -7,6 +7,7 @@ import logging
 import socket
 from contextlib import suppress
 from datetime import datetime, timedelta
+from http import HTTPStatus
 from types import TracebackType
 from typing import Any
 
@@ -171,26 +172,23 @@ class BraviaClient:
         )
 
         try:
-            if json:
-                response = await self._session.post(
-                    url,
-                    json=data,
-                    headers=headers,
-                    timeout=ClientTimeout(total=timeout),
-                    auth=self._auth,
-                    ssl=self._ssl_verify,
-                )
-            else:
-                response = await self._session.post(
-                    url,
-                    data=data,
-                    headers=headers,
-                    timeout=ClientTimeout(total=timeout),
-                    auth=self._auth,
-                    ssl=self._ssl_verify,
-                )
+            post_kwargs: dict[str, Any] = dict(
+                url=url,
+                headers=headers,
+                timeout=ClientTimeout(total=timeout),
+                auth=self._auth,
+                ssl=self._ssl_verify,
+            )
 
-            _LOGGER.debug("Response status: %s", response.status)
+            if json:
+                post_kwargs["json"] = data
+            else:
+                post_kwargs["data"] = data
+
+            response = await self._session.post(**post_kwargs)
+            status = HTTPStatus(response.status)
+
+            _LOGGER.debug("Response status: %s", status)
 
             # Normalize non RFC-compliant cookie
             # https://github.com/Drafteed/pybravia/issues/1#issuecomment-1237452709
@@ -202,15 +200,15 @@ class BraviaClient:
                     response_url=response.url,
                 )
 
-            if response.status == 200:
+            if status is HTTPStatus.OK:
                 result = await response.json() if json else True
                 _LOGGER.debug(
                     "Response result: %s",
                     deep_redact(result, ["cid", "serial", "macAddr"]),
                 )
-            if response.status == 404:
+            elif status is HTTPStatus.NOT_FOUND:
                 raise BraviaNotFound
-            if response.status in [401, 403]:
+            elif status in (HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN):
                 raise BraviaAuthError
         except ClientError as err:
             _LOGGER.debug("Request error %s", err)
