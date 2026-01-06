@@ -5,10 +5,12 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 from aiohttp import ClientSession
+from aioresponses import aioresponses
 
 from pybravia import BraviaClient
+from pybravia.const import SERVICE_SYSTEM
 
-from .conftest import TEST_HOST, TEST_MAC
+from .conftest import TEST_HOST, TEST_MAC, TEST_PSK
 
 
 def test_client_init() -> None:
@@ -46,3 +48,33 @@ def test_client_init_with_session() -> None:
     client = BraviaClient(host=TEST_HOST, session=session)
 
     assert client._session is session
+
+
+async def test_connect_with_psk(
+    client: BraviaClient, mock_aioresponse: aioresponses
+) -> None:
+    """Test connection with PSK."""
+    system_info = {
+        "result": [
+            {
+                "product": "TV",
+                "region": "XEU",
+                "language": "pol",
+                "model": "KD-55XF8596",
+                "serial": "1112233",
+                "macAddr": TEST_MAC,
+                "name": "BRAVIA",
+                "generation": "5.4.0",
+                "area": "POL",
+                "cid": "xyzabc123",
+            }
+        ]
+    }
+    mock_aioresponse.post(
+        f"http://{TEST_HOST}/sony/{SERVICE_SYSTEM}",
+        payload=system_info,
+    )
+
+    await client.connect(psk=TEST_PSK)
+
+    assert client._psk == TEST_PSK
