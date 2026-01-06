@@ -26,5 +26,5 @@
 		}
 	},
 	// Install all dependencies after container is created
-	"postCreateCommand": "pip install uv && uv venv && . .venv/bin/activate && uv sync"
+	"postCreateCommand": "pip install uv && uv venv && . .venv/bin/activate && uv sync --all-groups"
 }
