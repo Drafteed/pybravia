@@ -39,4 +39,4 @@ def mock_aioresponse() -> Generator[aioresponses]:
 def system_info() -> dict[str, list[dict[str, Any]]]:
     """Return system info data from the fixture file."""
     with Path("tests/fixtures/system_info.json").open(encoding="utf-8") as file:
-        return cast(dict[str, list[dict[str, Any]]], json.load(file))
+        return cast(dict[str, list[dict[str, str]]], json.load(file))
