@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import AsyncGenerator, Generator
+from pathlib import Path
+from typing import Any, cast
 
 import pytest
 from aioresponses import aioresponses
@@ -30,3 +33,10 @@ def mock_aioresponse() -> Generator[aioresponses]:
     """Create aioresponses context."""
     with aioresponses() as mock:
         yield mock
+
+
+@pytest.fixture
+def system_info() -> dict[str, list[dict[str, Any]]]:
+    """Return system info data from the fixture file."""
+    with Path("tests/fixtures/system_info.json").open(encoding="utf-8") as file:
+        return cast(dict[str, list[dict[str, Any]]], json.load(file))

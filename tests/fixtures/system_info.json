@@ -1,0 +1,16 @@
+{
+    "result": [
+        {
+            "product": "TV",
+            "region": "XEU",
+            "language": "pol",
+            "model": "KD-55XF8596",
+            "serial": "1112233",
+            "macAddr": "AA:BB:CC:DD:EE:FF",
+            "name": "BRAVIA",
+            "generation": "5.4.0",
+            "area": "POL",
+            "cid": "xyzabc123"
+        }
+    ]
+}

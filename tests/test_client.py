@@ -8,9 +8,16 @@ from aiohttp import ClientSession
 from aioresponses import aioresponses
 
 from pybravia import BraviaClient
-from pybravia.const import SERVICE_SYSTEM
+from pybravia.const import SERVICE_ACCESS_CONTROL, SERVICE_SYSTEM
 
-from .conftest import TEST_HOST, TEST_MAC, TEST_PSK
+from .conftest import (
+    TEST_CLIENTID,
+    TEST_HOST,
+    TEST_MAC,
+    TEST_NICKNAME,
+    TEST_PIN,
+    TEST_PSK,
+)
 
 
 def test_client_init() -> None:
@@ -51,25 +58,11 @@ def test_client_init_with_session() -> None:
 
 
 async def test_connect_with_psk(
-    client: BraviaClient, mock_aioresponse: aioresponses
+    client: BraviaClient,
+    mock_aioresponse: aioresponses,
+    system_info: dict[str, list[dict[str, object]]],
 ) -> None:
     """Test connection with PSK."""
-    system_info = {
-        "result": [
-            {
-                "product": "TV",
-                "region": "XEU",
-                "language": "pol",
-                "model": "KD-55XF8596",
-                "serial": "1112233",
-                "macAddr": TEST_MAC,
-                "name": "BRAVIA",
-                "generation": "5.4.0",
-                "area": "POL",
-                "cid": "xyzabc123",
-            }
-        ]
-    }
     mock_aioresponse.post(
         f"http://{TEST_HOST}/sony/{SERVICE_SYSTEM}",
         payload=system_info,
@@ -78,3 +71,24 @@ async def test_connect_with_psk(
     await client.connect(psk=TEST_PSK)
 
     assert client._psk == TEST_PSK
+
+
+async def test_connect_with_pin(
+    client: BraviaClient,
+    mock_aioresponse,
+    system_info: dict[str, list[dict[str, object]]],
+) -> None:
+    """Test connection with PIN."""
+    mock_aioresponse.post(
+        f"http://{TEST_HOST}/sony/{SERVICE_ACCESS_CONTROL}",
+        payload={"result": []},
+    )
+    mock_aioresponse.post(
+        f"http://{TEST_HOST}/sony/{SERVICE_SYSTEM}",
+        payload=system_info,
+    )
+
+    await client.connect(pin=TEST_PIN, clientid=TEST_CLIENTID, nickname=TEST_NICKNAME)
+
+    assert client._auth.password == TEST_PIN
+    assert client._psk is None
