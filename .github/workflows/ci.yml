@@ -38,3 +38,7 @@ jobs:
       - name: "Mypy type checking"
         run: |
           uv run mypy . --no-strict-optional --ignore-missing-imports
+
+      - name: "Run tests"
+        run: |
+          pytest tests --cov=pybravia --cov-report=term-missing
