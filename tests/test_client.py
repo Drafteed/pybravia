@@ -251,6 +251,8 @@ async def test_send_req_exc(
         ("Play", "play"),
         ("Next", "next_track"),
         ("Prev", "previous_track"),
+        ("ChannelUp", "channel_up"),
+        ("ChannelDown", "channel_down"),
     ],
 )
 async def test_pause(
