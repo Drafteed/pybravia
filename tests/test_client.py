@@ -244,6 +244,30 @@ async def test_send_req_exc(
         await client.send_req(client._base_url / "test")
 
 
+@pytest.mark.parametrize(
+    ("cmd", "method"),
+    [
+        ("Pause", "pause"),
+        ("Play", "play"),
+        ("Next", "next_track"),
+        ("Prev", "previous_track"),
+    ],
+)
+async def test_pause(
+    client: BraviaClient, mock_aioresponse: aioresponses, cmd: str, method: str
+) -> None:
+    """Test pause command."""
+    client._commands = {cmd: f"test_{method}"}
+
+    with patch.object(client, "send_ircc_req", return_value=True) as mock_send_ircc_req:
+        method_func = getattr(client, method)
+        result = await method_func()
+
+    assert result is True
+
+    mock_send_ircc_req.assert_called_with(f"test_{method}")
+
+
 async def test_stop(client: BraviaClient, mock_aioresponse: aioresponses) -> None:
     """Test stop command."""
     test_code = "test_stop_code"
@@ -257,12 +281,8 @@ async def test_stop(client: BraviaClient, mock_aioresponse: aioresponses) -> Non
             "id": 1,
         },
     )
-    mock_aioresponse.post(f"http://{TEST_HOST}/sony/ircc", body="OK", status=200)
-    mock_aioresponse.post(f"http://{TEST_HOST}/sony/ircc", body="OK", status=200)
 
-    with patch.object(
-        client, "send_ircc_req", wraps=client.send_ircc_req
-    ) as mock_send_ircc_req:
+    with patch.object(client, "send_ircc_req", return_value=True) as mock_send_ircc_req:
         result = await client.stop()
 
     assert result is True
@@ -271,8 +291,7 @@ async def test_stop(client: BraviaClient, mock_aioresponse: aioresponses) -> Non
     assert kwargs0["json"]["method"] == "getRemoteControllerInfo"
     assert kwargs0["json"]["params"] == []
 
-    assert mock_send_ircc_req.call_count == 2
-    mock_send_ircc_req.assert_any_call(test_code)
+    mock_send_ircc_req.assert_called_with(test_code)
 
 
 async def test_reboot(client: BraviaClient, mock_aioresponse: aioresponses) -> None:
