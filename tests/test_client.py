@@ -11,7 +11,7 @@ from aiohttp import ClientSession
 from aioresponses import aioresponses
 
 from pybravia import BraviaClient
-from pybravia.const import SERVICE_ACCESS_CONTROL, SERVICE_SYSTEM
+from pybravia.const import SERVICE_ACCESS_CONTROL, SERVICE_APP_CONTROL, SERVICE_SYSTEM
 from pybravia.exceptions import (
     BraviaAuthError,
     BraviaConnectionError,
@@ -242,3 +242,68 @@ async def test_send_req_exc(
 
     with pytest.raises(bravia_exc):
         await client.send_req(client._base_url / "test")
+
+
+async def test_stop(client: BraviaClient, mock_aioresponse: aioresponses) -> None:
+    """Test stop command."""
+    test_code = "test_stop_code"
+    mock_aioresponse.post(
+        f"http://{TEST_HOST}/sony/{SERVICE_SYSTEM}",
+        payload={
+            "result": [
+                {"bundled": True, "type": "IR_REMOTE_BUNDLE_TYPE_RESERVED01"},
+                [{"name": "Stop", "value": test_code}],
+            ],
+            "id": 1,
+        },
+    )
+    mock_aioresponse.post(f"http://{TEST_HOST}/sony/ircc", body="OK", status=200)
+    mock_aioresponse.post(f"http://{TEST_HOST}/sony/ircc", body="OK", status=200)
+
+    with patch.object(
+        client, "send_ircc_req", wraps=client.send_ircc_req
+    ) as mock_send_ircc_req:
+        result = await client.stop()
+
+    assert result is True
+
+    kwargs0 = list(mock_aioresponse.requests.values())[0][0].kwargs
+    assert kwargs0["json"]["method"] == "getRemoteControllerInfo"
+    assert kwargs0["json"]["params"] == []
+
+    assert mock_send_ircc_req.call_count == 2
+    mock_send_ircc_req.assert_any_call(test_code)
+
+
+async def test_reboot(client: BraviaClient, mock_aioresponse: aioresponses) -> None:
+    """Test reboot sends command."""
+    mock_aioresponse.post(
+        f"http://{TEST_HOST}/sony/{SERVICE_SYSTEM}",
+        payload={"result": []},
+    )
+
+    result = await client.reboot()
+
+    assert result is True
+
+    kwargs = list(mock_aioresponse.requests.values())[0][0].kwargs
+    assert kwargs["json"]["method"] == "requestReboot"
+    assert kwargs["json"]["params"] == []
+
+
+async def test_terminate_apps(
+    client: BraviaClient, mock_aioresponse: aioresponses
+) -> None:
+    """Test terminate_apps sends command."""
+    mock_aioresponse.post(
+        f"http://{TEST_HOST}/sony/{SERVICE_APP_CONTROL}",
+        payload={"result": []},
+    )
+
+    result = await client.terminate_apps()
+
+    assert result is True
+
+    kwargs = list(mock_aioresponse.requests.values())[0][0].kwargs
+    assert kwargs["json"]["method"] == "terminateApps"
+    assert kwargs["json"]["params"] == []
