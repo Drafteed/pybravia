@@ -19,5 +19,5 @@
 			]
 		}
 	},
-	"postCreateCommand": "pip install uv && uv venv && . .venv/bin/activate && uv sync --all-groups"
+	"postCreateCommand": "pip install uv && uv venv && . .venv/bin/activate && uv sync --all-groups && prek install"
 }
