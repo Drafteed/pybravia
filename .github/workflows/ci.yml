@@ -37,7 +37,7 @@ jobs:
 
       - name: "Mypy type checking"
         run: |
-          uv run ty check . --no-strict-optional --ignore-missing-imports
+          uv run ty check .
 
       - name: "Run tests"
         run: |
