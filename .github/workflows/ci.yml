@@ -39,6 +39,17 @@ jobs:
         run: |
           uv run ty check .
 
+      - name: Run prek
+        run: |
+          uv run prek run \
+            end-of-file-fixer \
+            trailing-whitespace \
+            check-yaml \
+            check-json \
+            check-toml \
+            mixed-line-ending \
+            --all-files
+
       - name: "Run tests"
         run: |
           uv sync --group test
