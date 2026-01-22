@@ -49,4 +49,4 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 
 [tool.ty.rules]
-unresolved-import = "warning"
+unresolved-import = "warn"
