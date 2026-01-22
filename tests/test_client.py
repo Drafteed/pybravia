@@ -90,5 +90,5 @@ async def test_connect_with_pin(
 
     await client.connect(pin=TEST_PIN, clientid=TEST_CLIENTID, nickname=TEST_NICKNAME)
 
-    assert client._auth.password == TEST_PIN
+    assert client._auth.password == TEST_PIN  # type: ignore[possibly-missing-attribute]
     assert client._psk is None

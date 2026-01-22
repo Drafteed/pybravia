@@ -19,7 +19,7 @@ dependencies = [
 dev = [
   "ruff==0.14.10",
   "pre-commit==4.5.1",
-  "mypy==1.19.1",
+  "ty==0.0.13",
 ]
 test = [
   "pytest==9.0.2",
