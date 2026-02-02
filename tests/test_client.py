@@ -12,6 +12,7 @@ from aioresponses import aioresponses
 
 from pybravia import BraviaClient
 from pybravia.const import (
+    CODE_POWER_ON,
     SERVICE_ACCESS_CONTROL,
     SERVICE_APP_CONTROL,
     SERVICE_SYSTEM,
@@ -478,3 +479,63 @@ async def test_volume_mute_toggle(
     kwargs = requests[0][1].kwargs
     assert kwargs["json"]["method"] == "setAudioMute"
     assert kwargs["json"]["params"] == [{"status": True}]
+
+
+async def test_turn_on(client: BraviaClient, mock_aioresponse: aioresponses) -> None:
+    """Test turn_on sends WOL and power commands."""
+    mock_aioresponse.post(
+        f"http://{TEST_HOST}/sony/{SERVICE_SYSTEM}",
+        payload={"result": [{"status": "standby"}], "id": 1},
+    )
+    mock_aioresponse.post(
+        f"http://{TEST_HOST}/sony/{SERVICE_SYSTEM}",
+        payload={"result": [], "id": 1},
+    )
+    mock_aioresponse.post(
+        f"http://{TEST_HOST}/sony/IRCC",
+        body="OK",
+        status=200,
+    )
+    mock_aioresponse.post(
+        f"http://{TEST_HOST}/sony/IRCC",
+        body="OK",
+        status=200,
+    )
+
+    with patch.object(client, "send_wol_req", return_value=True) as mock_wol:
+        result = await client.turn_on()
+
+    assert result is True
+    mock_wol.assert_called_once()
+
+    requests = list(mock_aioresponse.requests.values())
+
+    kwargs = requests[0][0].kwargs
+    assert kwargs["json"]["method"] == "getPowerStatus"
+
+    kwargs = requests[0][1].kwargs
+    assert kwargs["json"]["method"] == "setPowerStatus"
+    assert kwargs["json"]["params"] == [{"status": True}]
+
+    # Empty request to 'wake up' the API
+    kwargs = requests[1][0].kwargs
+    assert "<IRCCCode></IRCCCode>" in kwargs["data"]
+
+    kwargs = requests[1][1].kwargs
+    assert f"<IRCCCode>{CODE_POWER_ON}</IRCCCode>" in kwargs["data"]
+
+
+async def test_turn_off(client: BraviaClient, mock_aioresponse: aioresponses) -> None:
+    """Test turn_off sends power off command."""
+    mock_aioresponse.post(
+        f"http://{TEST_HOST}/sony/{SERVICE_SYSTEM}",
+        payload={"result": [], "id": 1},
+    )
+
+    result = await client.turn_off()
+
+    assert result is True
+
+    kwargs = list(mock_aioresponse.requests.values())[0][0].kwargs
+    assert kwargs["json"]["method"] == "setPowerStatus"
+    assert kwargs["json"]["params"] == [{"status": False}]
