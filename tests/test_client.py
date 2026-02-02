@@ -260,10 +260,10 @@ async def test_send_req_exc(
         ("ChannelDown", "channel_down"),
     ],
 )
-async def test_pause(
+async def test_playback_control(
     client: BraviaClient, mock_aioresponse: aioresponses, cmd: str, method: str
 ) -> None:
-    """Test pause command."""
+    """Test playback control command."""
     client._commands = {cmd: f"test_{method}"}
 
     with patch.object(client, "send_ircc_req", return_value=True) as mock_send_ircc_req:
@@ -276,7 +276,7 @@ async def test_pause(
 
 
 async def test_stop(client: BraviaClient, mock_aioresponse: aioresponses) -> None:
-    """Test stop command."""
+    """Test stop command when the list of available commands is empty."""
     test_code = "test_stop_code"
     mock_aioresponse.post(
         f"http://{TEST_HOST}/sony/{SERVICE_SYSTEM}",
