@@ -14,7 +14,6 @@ ehthumbs.db
 nbproject/
 .idea
 *.iml
-.vscode
 *.sublime-project
 *.sublime-workspace
 
