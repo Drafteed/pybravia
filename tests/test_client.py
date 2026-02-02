@@ -353,38 +353,34 @@ async def test_set_text_form(
     assert kwargs["json"]["params"] == ["test text"]
 
 
-async def test_volume_up(client: BraviaClient, mock_aioresponse: aioresponses) -> None:
-    """Test volume_up increases volume."""
-    mock_aioresponse.post(
-        f"http://{TEST_HOST}/sony/audio",
-        payload={"result": []},
-    )
-
-    result = await client.volume_up(step=2)
-
-    assert result is True
-
-    kwargs = list(mock_aioresponse.requests.values())[0][0].kwargs
-    assert kwargs["json"]["method"] == "setAudioVolume"
-    assert kwargs["json"]["params"] == [{"target": "speaker", "volume": "+2"}]
-
-
-async def test_volume_down(
-    client: BraviaClient, mock_aioresponse: aioresponses
+@pytest.mark.parametrize(
+    ("method", "step", "expected_param"),
+    [
+        ("volume_up", 2, "+2"),
+        ("volume_down", 3, "-3"),
+    ],
+)
+async def test_volume_up_down(
+    client: BraviaClient,
+    mock_aioresponse: aioresponses,
+    method: str,
+    step: int,
+    expected_param: str,
 ) -> None:
-    """Test volume_down decreases volume."""
+    """Test volume_up and volume_down methods."""
     mock_aioresponse.post(
         f"http://{TEST_HOST}/sony/audio",
         payload={"result": []},
     )
 
-    result = await client.volume_down(step=3)
+    method_func = getattr(client, method)
+    result = await method_func(step=step)
 
     assert result is True
 
     kwargs = list(mock_aioresponse.requests.values())[0][0].kwargs
     assert kwargs["json"]["method"] == "setAudioVolume"
-    assert kwargs["json"]["params"] == [{"target": "speaker", "volume": "-3"}]
+    assert kwargs["json"]["params"] == [{"target": "speaker", "volume": expected_param}]
 
 
 async def test_volume_level(
