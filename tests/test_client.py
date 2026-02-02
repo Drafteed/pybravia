@@ -11,7 +11,11 @@ from aiohttp import ClientSession
 from aioresponses import aioresponses
 
 from pybravia import BraviaClient
-from pybravia.const import SERVICE_ACCESS_CONTROL, SERVICE_APP_CONTROL, SERVICE_SYSTEM
+from pybravia.const import (
+    SERVICE_ACCESS_CONTROL,
+    SERVICE_APP_CONTROL,
+    SERVICE_SYSTEM,
+)
 from pybravia.exceptions import (
     BraviaAuthError,
     BraviaConnectionError,
@@ -328,3 +332,149 @@ async def test_terminate_apps(
     kwargs = list(mock_aioresponse.requests.values())[0][0].kwargs
     assert kwargs["json"]["method"] == "terminateApps"
     assert kwargs["json"]["params"] == []
+
+
+async def test_set_text_form(
+    client: BraviaClient, mock_aioresponse: aioresponses
+) -> None:
+    """Test set_text_form sends text input."""
+    mock_aioresponse.post(
+        f"http://{TEST_HOST}/sony/{SERVICE_APP_CONTROL}",
+        payload={"result": []},
+    )
+
+    result = await client.set_text_form("test text")
+
+    assert result is True
+
+    kwargs = list(mock_aioresponse.requests.values())[0][0].kwargs
+    assert kwargs["json"]["method"] == "setTextForm"
+    assert kwargs["json"]["params"] == ["test text"]
+
+
+async def test_volume_up(client: BraviaClient, mock_aioresponse: aioresponses) -> None:
+    """Test volume_up increases volume."""
+    mock_aioresponse.post(
+        f"http://{TEST_HOST}/sony/audio",
+        payload={"result": []},
+    )
+
+    result = await client.volume_up(step=2)
+
+    assert result is True
+
+    kwargs = list(mock_aioresponse.requests.values())[0][0].kwargs
+    assert kwargs["json"]["method"] == "setAudioVolume"
+    assert kwargs["json"]["params"] == [{"target": "speaker", "volume": "+2"}]
+
+
+async def test_volume_down(
+    client: BraviaClient, mock_aioresponse: aioresponses
+) -> None:
+    """Test volume_down decreases volume."""
+    mock_aioresponse.post(
+        f"http://{TEST_HOST}/sony/audio",
+        payload={"result": []},
+    )
+
+    result = await client.volume_down(step=3)
+
+    assert result is True
+
+    kwargs = list(mock_aioresponse.requests.values())[0][0].kwargs
+    assert kwargs["json"]["method"] == "setAudioVolume"
+    assert kwargs["json"]["params"] == [{"target": "speaker", "volume": "-3"}]
+
+
+async def test_volume_level(
+    client: BraviaClient, mock_aioresponse: aioresponses
+) -> None:
+    """Test volume_level sets absolute volume."""
+    mock_aioresponse.post(
+        f"http://{TEST_HOST}/sony/audio",
+        payload={"result": []},
+    )
+
+    result = await client.volume_level(level=25)
+
+    assert result is True
+
+    kwargs = list(mock_aioresponse.requests.values())[0][0].kwargs
+    assert kwargs["json"]["method"] == "setAudioVolume"
+    assert kwargs["json"]["params"] == [{"target": "speaker", "volume": "25"}]
+
+
+async def test_volume_level_with_ui_mode(
+    client: BraviaClient, mock_aioresponse: aioresponses
+) -> None:
+    """Test volume_level with UI mode parameter."""
+    mock_aioresponse.post(
+        f"http://{TEST_HOST}/sony/audio",
+        payload={"result": []},
+    )
+
+    result = await client.volume_level(level=30, ui_mode="on")
+
+    assert result is True
+
+    kwargs = list(mock_aioresponse.requests.values())[0][0].kwargs
+    assert kwargs["json"]["method"] == "setAudioVolume"
+    assert kwargs["json"]["params"] == [
+        {"target": "speaker", "volume": "30", "ui": "on"}
+    ]
+
+
+async def test_volume_mute_explicit(
+    client: BraviaClient, mock_aioresponse: aioresponses
+) -> None:
+    """Test volume_mute with explicit mute value."""
+    mock_aioresponse.post(
+        f"http://{TEST_HOST}/sony/audio",
+        payload={"result": []},
+    )
+
+    result = await client.volume_mute(mute=True)
+
+    assert result is True
+
+    kwargs = list(mock_aioresponse.requests.values())[0][0].kwargs
+    assert kwargs["json"]["method"] == "setAudioMute"
+    assert kwargs["json"]["params"] == [{"status": True}]
+
+
+async def test_volume_mute_toggle(
+    client: BraviaClient, mock_aioresponse: aioresponses
+) -> None:
+    """Test volume_mute toggles mute status."""
+    mock_aioresponse.post(
+        f"http://{TEST_HOST}/sony/audio",
+        payload={
+            "result": [
+                [
+                    {
+                        "target": "speaker",
+                        "volume": 20,
+                        "mute": False,
+                        "maxVolume": 100,
+                        "minVolume": 0,
+                    }
+                ]
+            ]
+        },
+    )
+    mock_aioresponse.post(
+        f"http://{TEST_HOST}/sony/audio",
+        payload={"result": []},
+    )
+
+    result = await client.volume_mute()
+
+    assert result is True
+
+    requests = list(mock_aioresponse.requests.values())
+    kwargs = requests[0][0].kwargs
+    assert kwargs["json"]["method"] == "getVolumeInformation"
+
+    kwargs = requests[0][1].kwargs
+    assert kwargs["json"]["method"] == "setAudioMute"
+    assert kwargs["json"]["params"] == [{"status": True}]
