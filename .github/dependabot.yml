@@ -1,0 +1,25 @@
+version: 2
+updates:
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      dev:
+        patterns:
+          - "prek"
+          - "ruff"
+          - "ty"
+      test:
+        patterns:
+          - "aioresponses"
+          - "pytest"
+          - "pytest-asyncio"
+          - "pytest-cov"
+    ignore:
+      - dependency-name: "aiohttp"
+      - dependency-name: "yarl"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
