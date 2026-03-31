@@ -27,6 +27,10 @@ jobs:
           activate-environment: true
           python-version: "${{ matrix.python-version }}"
 
+      - name: Install dependencies
+        run: |
+          uv sync --group test
+
       - name: "Ruff link"
         run: |
           uv run ruff check .
@@ -52,5 +56,4 @@ jobs:
 
       - name: "Run tests"
         run: |
-          uv sync --group test
           uv run pytest tests --cov=pybravia --cov-report=term-missing
