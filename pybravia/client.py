@@ -9,7 +9,7 @@ from contextlib import suppress
 from datetime import datetime, timedelta
 from http import HTTPStatus
 from types import TracebackType
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from aiohttp import BasicAuth, ClientError, ClientSession, ClientTimeout, CookieJar
 from yarl import URL
@@ -97,9 +97,12 @@ class BraviaClient:
         if self._psk:
             _LOGGER.debug("Connected with PSK")
         else:
+            if TYPE_CHECKING:
+                assert self._session is not None
+
             _LOGGER.debug(
                 "Connected with PIN, cookie len: %s",
-                len(self._session._cookie_jar),  # type: ignore[union-attr]
+                len(self._session._cookie_jar),
             )
 
     async def register(self, pin: str, clientid: str, nickname: str) -> None:
