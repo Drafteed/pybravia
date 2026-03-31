@@ -50,3 +50,6 @@ asyncio_default_fixture_loop_scope = "function"
 
 [tool.ty.rules]
 unresolved-import = "warn"
+
+[tool.ty.src]
+exclude = ["tests"]
