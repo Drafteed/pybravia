@@ -527,11 +527,20 @@ async def test_turn_off(client: BraviaClient, mock_aioresponse: aioresponses) ->
         f"http://{TEST_HOST}/sony/{SERVICE_SYSTEM}",
         payload={"result": [], "id": 1},
     )
+    mock_aioresponse.post(
+        f"http://{TEST_HOST}/sony/{SERVICE_SYSTEM}",
+        payload={"error": [400, "not power-on"], "id": 1},
+    )
 
     result = await client.turn_off()
+    already_off_result = await client.turn_off()
 
     assert result is True
+    assert already_off_result is True
 
-    kwargs = list(mock_aioresponse.requests.values())[0][0].kwargs
+    requests = list(mock_aioresponse.requests.values())[0]
+    assert len(requests) == 2
+
+    kwargs = requests[0].kwargs
     assert kwargs["json"]["method"] == "setPowerStatus"
     assert kwargs["json"]["params"] == [{"status": False}]

@@ -592,7 +592,9 @@ class BraviaClient:
 
     async def turn_off(self) -> bool:
         """Turn off the device."""
-        return await self.set_power_status(False)
+        with suppress(BraviaTurnedOff):
+            return await self.set_power_status(False)
+        return True
 
     async def volume_up(self, step: int = 1, **kwargs: str) -> bool:
         """Increase the volume."""
