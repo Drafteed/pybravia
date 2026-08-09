@@ -538,7 +538,7 @@ async def test_turn_off(client: BraviaClient, mock_aioresponse: aioresponses) ->
     assert result is True
     assert already_off_result is True
 
-    requests = list(mock_aioresponse.requests.values())[0]
+    requests = next(iter(mock_aioresponse.requests.values()))
     assert len(requests) == 2
 
     kwargs = requests[0].kwargs
