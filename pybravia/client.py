@@ -11,7 +11,7 @@ from http import HTTPStatus
 from types import TracebackType
 from typing import TYPE_CHECKING, Any
 
-from aiohttp import BasicAuth, ClientError, ClientSession, ClientTimeout, CookieJar
+from aiohttp import ClientError, ClientSession, ClientTimeout, CookieJar
 from yarl import URL
 
 from .const import (
@@ -38,7 +38,7 @@ from .exceptions import (
     BraviaNotSupported,
     BraviaTurnedOff,
 )
-from .util import deep_redact, normalize_cookies
+from .util import basic_auth_header, deep_redact, normalize_cookies
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -60,7 +60,7 @@ class BraviaClient:
         self._session = session
         self._base_url = URL.build(scheme="https" if ssl else "http", host=host)
         self._ssl_verify = ssl_verify
-        self._auth: BasicAuth | None = None
+        self._auth_header: str | None = None
         self._psk: str | None = None
         self._ircc_time: datetime | None = None
         self._ircc_endpoint = SERVICE_IRCC
@@ -87,7 +87,7 @@ class BraviaClient:
             assert nickname is not None
             await self.register(pin, clientid, nickname)
         elif self._session is not None:
-            self._auth = None
+            self._auth_header = None
             self._session.cookie_jar.clear()
 
         system_info = await self.get_system_info()
@@ -107,7 +107,7 @@ class BraviaClient:
 
     async def register(self, pin: str, clientid: str, nickname: str) -> None:
         """Register the device with PIN."""
-        self._auth = BasicAuth("", pin)
+        self._auth_header = basic_auth_header("", pin)
         params = [
             {"clientid": clientid, "nickname": nickname, "level": "private"},
             [{"value": "yes", "function": "WOL"}],
@@ -127,7 +127,7 @@ class BraviaClient:
         """Close connection."""
         if self._session:
             await self._session.close()
-        self._auth = None
+        self._auth_header = None
         self._psk = None
         self._session = None
 
@@ -169,6 +169,9 @@ class BraviaClient:
         if self._psk:
             headers["X-Auth-PSK"] = self._psk
 
+        if self._auth_header:
+            headers["Authorization"] = self._auth_header
+
         headers["Cache-Control"] = "no-cache"
         headers["Connection"] = "keep-alive"
 
@@ -176,7 +179,7 @@ class BraviaClient:
             "Request %s, data: %s, headers: %s",
             url,
             data,
-            deep_redact(headers, ["X-Auth-PSK"]),
+            deep_redact(headers, ["X-Auth-PSK", "Authorization"]),
         )
 
         try:
@@ -184,7 +187,6 @@ class BraviaClient:
                 url=url,
                 headers=headers,
                 timeout=ClientTimeout(total=timeout),
-                auth=self._auth,
                 ssl=self._ssl_verify,
             )
 

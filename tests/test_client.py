@@ -24,6 +24,7 @@ from pybravia.exceptions import (
     BraviaNotFound,
     BraviaNotSupported,
 )
+from pybravia.util import basic_auth_header
 
 from .conftest import (
     TEST_CLIENTID,
@@ -44,7 +45,7 @@ def test_client_init() -> None:
     assert client._session is None
     assert str(client._base_url) == f"http://{TEST_HOST}"
     assert client._ssl_verify is False
-    assert client._auth is None
+    assert client._auth_header is None
     assert client._psk is None
     assert client._commands == {}
 
@@ -105,7 +106,7 @@ async def test_connect_with_pin(
 
     await client.connect(pin=TEST_PIN, clientid=TEST_CLIENTID, nickname=TEST_NICKNAME)
 
-    assert client._auth.password == TEST_PIN  # type: ignore[possibly-missing-attribute]
+    assert client._auth_header == basic_auth_header("", TEST_PIN)
     assert client._psk is None
 
 
