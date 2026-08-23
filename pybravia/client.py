@@ -46,6 +46,9 @@ from .exceptions import (
 )
 from .util import deep_redact, normalize_cookies
 
+if TYPE_CHECKING:
+    from typing_extensions import Self
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -189,12 +192,12 @@ class BraviaClient:
         )
 
         try:
-            post_kwargs: dict[str, Any] = dict(
-                url=url,
-                headers=headers,
-                timeout=ClientTimeout(total=timeout),
-                ssl=self._ssl_verify,
-            )
+            post_kwargs: dict[str, Any] = {
+                "url": url,
+                "headers": headers,
+                "timeout": ClientTimeout(total=timeout),
+                "ssl": self._ssl_verify,
+            }
 
             if json:
                 post_kwargs["json"] = data
@@ -247,7 +250,7 @@ class BraviaClient:
         # The endpoint of some TVs is case sensitive, this also detects this.
         # https://github.com/home-assistant/core/issues/86132
         if code != "":
-            time = datetime.now()
+            time = datetime.now()  # noqa: DTZ005
             if not self._ircc_time or (time - self._ircc_time) > timedelta(minutes=10):
                 try:
                     await self.send_ircc_req("")
@@ -309,9 +312,8 @@ class BraviaClient:
             timeout=timeout,
         )
 
-        if error := resp.get("error"):
-            if "not power-on" in error:
-                raise BraviaTurnedOff
+        if (error := resp.get("error")) and "not power-on" in error:
+            raise BraviaTurnedOff
 
         return resp
 
@@ -679,15 +681,15 @@ class BraviaClient:
         """Send command to reboot the device."""
         return await self.send_rest_quick(SERVICE_SYSTEM, "requestReboot")
 
-    async def __aenter__(self) -> BraviaClient:
+    async def __aenter__(self) -> Self:
         """Connect the client with context manager."""
         return self
 
     async def __aexit__(
         self,
-        exc_type: Exception,
-        exc_value: str,
-        traceback: TracebackType,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
     ) -> None:
         """Disconnect from context manager."""
         await self.disconnect()

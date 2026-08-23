@@ -104,7 +104,9 @@ async def main():
     """Example of connect with PIN."""
     async with BraviaClient(HOST) as client:
         try:
-            connected = await client.connect(pin=PIN, clientid=CLIENTID, nickname=NICKNAME)
+            connected = await client.connect(
+                pin=PIN, clientid=CLIENTID, nickname=NICKNAME
+            )
             info = await client.get_system_info()
 
             print(info)
