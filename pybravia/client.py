@@ -11,7 +11,13 @@ from http import HTTPStatus
 from types import TracebackType
 from typing import TYPE_CHECKING, Any
 
-from aiohttp import ClientError, ClientSession, ClientTimeout, CookieJar
+from aiohttp import (
+    ClientError,
+    ClientSession,
+    ClientTimeout,
+    CookieJar,
+    encode_basic_auth,
+)
 from yarl import URL
 
 from .const import (
@@ -38,7 +44,7 @@ from .exceptions import (
     BraviaNotSupported,
     BraviaTurnedOff,
 )
-from .util import basic_auth_header, deep_redact, normalize_cookies
+from .util import deep_redact, normalize_cookies
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -107,7 +113,7 @@ class BraviaClient:
 
     async def register(self, pin: str, clientid: str, nickname: str) -> None:
         """Register the device with PIN."""
-        self._auth_header = basic_auth_header("", pin)
+        self._auth_header = encode_basic_auth("", pin)
         params = [
             {"clientid": clientid, "nickname": nickname, "level": "private"},
             [{"value": "yes", "function": "WOL"}],

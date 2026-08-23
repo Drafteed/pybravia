@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import json
-from collections.abc import AsyncGenerator, Generator
+from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import Any, cast
 
 import pytest
-from aioresponses import aioresponses
+from aiointercept import aiointercept
 
 from pybravia import BraviaClient
 
@@ -29,10 +29,16 @@ async def client() -> AsyncGenerator[BraviaClient]:
 
 
 @pytest.fixture
-def mock_aioresponse() -> Generator[aioresponses]:
-    """Create aioresponses context."""
-    with aioresponses() as mock:
+async def mock_http() -> AsyncGenerator[aiointercept]:
+    """Create the HTTP interception context."""
+    async with aiointercept(mock_external_urls=True) as mock:
         yield mock
+
+
+@pytest.fixture(autouse=True)
+def intercept_ip_hosts(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Route IP literal hosts through aiohttp's resolver for aiointercept."""
+    monkeypatch.setattr("aiointercept.core.is_ip_address", lambda _host: False)
 
 
 @pytest.fixture

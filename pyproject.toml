@@ -11,7 +11,7 @@ readme = "README.md"
 authors = [{name = "Artem Draft"}]
 requires-python = ">=3.10"
 dependencies = [
-  "aiohttp>=3.8",
+  "aiohttp>=3.14.0",
   "yarl",
 ]
 
@@ -25,7 +25,7 @@ test = [
   "pytest==9.1.1",
   "pytest-asyncio==1.4.0",
   "pytest-cov==7.1.0",
-  "aioresponses==0.7.9",
+  "aiointercept==0.1.9",
 ]
 
 [tool.ruff]
