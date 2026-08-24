@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pybravia"
-version = "0.4.1"
+version = "0.0.0"
 license = {text = "MIT"}
 description = "Python async library for remote control of Sony Bravia TVs 2013 and newer."
 readme = "README.md"
@@ -14,6 +14,9 @@ dependencies = [
   "aiohttp>=3.14.0",
   "yarl",
 ]
+
+[project.urls]
+source = "https://github.com/Drafteed/pybravia"
 
 [dependency-groups]
 dev = [
