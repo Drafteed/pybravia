@@ -11,7 +11,13 @@ from http import HTTPStatus
 from types import TracebackType
 from typing import TYPE_CHECKING, Any
 
-from aiohttp import BasicAuth, ClientError, ClientSession, ClientTimeout, CookieJar
+from aiohttp import (
+    ClientError,
+    ClientSession,
+    ClientTimeout,
+    CookieJar,
+    encode_basic_auth,
+)
 from yarl import URL
 
 from .const import (
@@ -40,6 +46,9 @@ from .exceptions import (
 )
 from .util import deep_redact, normalize_cookies
 
+if TYPE_CHECKING:
+    from typing_extensions import Self
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -60,7 +69,7 @@ class BraviaClient:
         self._session = session
         self._base_url = URL.build(scheme="https" if ssl else "http", host=host)
         self._ssl_verify = ssl_verify
-        self._auth: BasicAuth | None = None
+        self._auth_header: str | None = None
         self._psk: str | None = None
         self._ircc_time: datetime | None = None
         self._ircc_endpoint = SERVICE_IRCC
@@ -87,7 +96,7 @@ class BraviaClient:
             assert nickname is not None
             await self.register(pin, clientid, nickname)
         elif self._session is not None:
-            self._auth = None
+            self._auth_header = None
             self._session.cookie_jar.clear()
 
         system_info = await self.get_system_info()
@@ -107,7 +116,7 @@ class BraviaClient:
 
     async def register(self, pin: str, clientid: str, nickname: str) -> None:
         """Register the device with PIN."""
-        self._auth = BasicAuth("", pin)
+        self._auth_header = encode_basic_auth("", pin)
         params = [
             {"clientid": clientid, "nickname": nickname, "level": "private"},
             [{"value": "yes", "function": "WOL"}],
@@ -127,7 +136,7 @@ class BraviaClient:
         """Close connection."""
         if self._session:
             await self._session.close()
-        self._auth = None
+        self._auth_header = None
         self._psk = None
         self._session = None
 
@@ -169,6 +178,9 @@ class BraviaClient:
         if self._psk:
             headers["X-Auth-PSK"] = self._psk
 
+        if self._auth_header:
+            headers["Authorization"] = self._auth_header
+
         headers["Cache-Control"] = "no-cache"
         headers["Connection"] = "keep-alive"
 
@@ -176,17 +188,16 @@ class BraviaClient:
             "Request %s, data: %s, headers: %s",
             url,
             data,
-            deep_redact(headers, ["X-Auth-PSK"]),
+            deep_redact(headers, ["X-Auth-PSK", "Authorization"]),
         )
 
         try:
-            post_kwargs: dict[str, Any] = dict(
-                url=url,
-                headers=headers,
-                timeout=ClientTimeout(total=timeout),
-                auth=self._auth,
-                ssl=self._ssl_verify,
-            )
+            post_kwargs: dict[str, Any] = {
+                "url": url,
+                "headers": headers,
+                "timeout": ClientTimeout(total=timeout),
+                "ssl": self._ssl_verify,
+            }
 
             if json:
                 post_kwargs["json"] = data
@@ -239,7 +250,7 @@ class BraviaClient:
         # The endpoint of some TVs is case sensitive, this also detects this.
         # https://github.com/home-assistant/core/issues/86132
         if code != "":
-            time = datetime.now()
+            time = datetime.now()  # noqa: DTZ005
             if not self._ircc_time or (time - self._ircc_time) > timedelta(minutes=10):
                 try:
                     await self.send_ircc_req("")
@@ -301,9 +312,8 @@ class BraviaClient:
             timeout=timeout,
         )
 
-        if error := resp.get("error"):
-            if "not power-on" in error:
-                raise BraviaTurnedOff
+        if (error := resp.get("error")) and "not power-on" in error:
+            raise BraviaTurnedOff
 
         return resp
 
@@ -671,15 +681,15 @@ class BraviaClient:
         """Send command to reboot the device."""
         return await self.send_rest_quick(SERVICE_SYSTEM, "requestReboot")
 
-    async def __aenter__(self) -> BraviaClient:
+    async def __aenter__(self) -> Self:
         """Connect the client with context manager."""
         return self
 
     async def __aexit__(
         self,
-        exc_type: Exception,
-        exc_value: str,
-        traceback: TracebackType,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
     ) -> None:
         """Disconnect from context manager."""
         await self.disconnect()

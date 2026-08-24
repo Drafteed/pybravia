@@ -7,8 +7,8 @@ from http import HTTPStatus
 from unittest.mock import MagicMock, patch
 
 import pytest
-from aiohttp import ClientSession
-from aioresponses import aioresponses
+from aiohttp import ClientSession, encode_basic_auth
+from aiointercept import aiointercept
 
 from pybravia import BraviaClient
 from pybravia.const import (
@@ -44,7 +44,7 @@ def test_client_init() -> None:
     assert client._session is None
     assert str(client._base_url) == f"http://{TEST_HOST}"
     assert client._ssl_verify is False
-    assert client._auth is None
+    assert client._auth_header is None
     assert client._psk is None
     assert client._commands == {}
 
@@ -74,11 +74,11 @@ def test_client_init_with_session() -> None:
 
 async def test_connect_with_psk(
     client: BraviaClient,
-    mock_aioresponse: aioresponses,
+    mock_http: aiointercept,
     system_info: dict[str, list[dict[str, object]]],
 ) -> None:
     """Test connection with PSK."""
-    mock_aioresponse.post(
+    mock_http.post(
         f"http://{TEST_HOST}/sony/{SERVICE_SYSTEM}",
         payload=system_info,
     )
@@ -90,30 +90,30 @@ async def test_connect_with_psk(
 
 async def test_connect_with_pin(
     client: BraviaClient,
-    mock_aioresponse: aioresponses,
+    mock_http: aiointercept,
     system_info: dict[str, list[dict[str, object]]],
 ) -> None:
     """Test connection with PIN."""
-    mock_aioresponse.post(
+    mock_http.post(
         f"http://{TEST_HOST}/sony/{SERVICE_ACCESS_CONTROL}",
         payload={"result": []},
     )
-    mock_aioresponse.post(
+    mock_http.post(
         f"http://{TEST_HOST}/sony/{SERVICE_SYSTEM}",
         payload=system_info,
     )
 
     await client.connect(pin=TEST_PIN, clientid=TEST_CLIENTID, nickname=TEST_NICKNAME)
 
-    assert client._auth.password == TEST_PIN  # type: ignore[possibly-missing-attribute]
+    assert client._auth_header == encode_basic_auth("", TEST_PIN)
     assert client._psk is None
 
 
 async def test_connect_not_supported(
-    client: BraviaClient, mock_aioresponse: aioresponses
+    client: BraviaClient, mock_http: aiointercept
 ) -> None:
     """Test connection failure when device is not supported."""
-    mock_aioresponse.post(
+    mock_http.post(
         f"http://{TEST_HOST}/sony/{SERVICE_SYSTEM}",
         payload={"result": [{}]},
     )
@@ -155,29 +155,29 @@ def test_send_wol_packet(client: BraviaClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_pair(client: BraviaClient, mock_aioresponse: aioresponses) -> None:
+async def test_pair(client: BraviaClient, mock_http: aiointercept) -> None:
     """Test pairing process."""
-    mock_aioresponse.post(
+    mock_http.post(
         f"http://{TEST_HOST}/sony/{SERVICE_ACCESS_CONTROL}",
         payload={"result": []},
     )
 
     await client.pair(TEST_CLIENTID, TEST_NICKNAME)
 
-    kwargs = list(mock_aioresponse.requests.values())[0][0].kwargs
-    assert kwargs["json"]["method"] == "actRegister"
-    assert kwargs["json"]["params"] == [
+    payload = await next(iter(mock_http.requests.values()))[0].json()
+    assert payload["method"] == "actRegister"
+    assert payload["params"] == [
         {"clientid": TEST_CLIENTID, "nickname": TEST_NICKNAME, "level": "private"},
         [{"function": "WOL", "value": "yes"}],
     ]
 
 
 async def test_send_req_json_response(
-    client: BraviaClient, mock_aioresponse: aioresponses
+    client: BraviaClient, mock_http: aiointercept
 ) -> None:
     """Test send_req returns JSON response."""
     expected = {"result": [{"key": "value"}]}
-    mock_aioresponse.post(
+    mock_http.post(
         f"http://{TEST_HOST}/test",
         payload=expected,
     )
@@ -187,11 +187,9 @@ async def test_send_req_json_response(
     assert result == expected
 
 
-async def test_send_req_non_json(
-    client: BraviaClient, mock_aioresponse: aioresponses
-) -> None:
+async def test_send_req_non_json(client: BraviaClient, mock_http: aiointercept) -> None:
     """Test send_req returns True for non-JSON success."""
-    mock_aioresponse.post(
+    mock_http.post(
         f"http://{TEST_HOST}/test",
         body="OK",
         status=200,
@@ -212,12 +210,12 @@ async def test_send_req_non_json(
 )
 async def test_send_req_status(
     client: BraviaClient,
-    mock_aioresponse: aioresponses,
+    mock_http: aiointercept,
     status: HTTPStatus,
     exc: Exception,
 ) -> None:
     """Test send_req raises an exception."""
-    mock_aioresponse.post(
+    mock_http.post(
         f"http://{TEST_HOST}/test",
         status=status,
     )
@@ -235,17 +233,14 @@ async def test_send_req_status(
 )
 async def test_send_req_exc(
     client: BraviaClient,
-    mock_aioresponse: aioresponses,
-    exc: Exception,
-    bravia_exc: Exception,
+    exc: type[Exception],
+    bravia_exc: type[Exception],
 ) -> None:
     """Test send_req raises BraviaConnectionTimeout on timeout."""
-    mock_aioresponse.post(
-        f"http://{TEST_HOST}/test",
-        exception=exc,
-    )
-
-    with pytest.raises(bravia_exc):
+    with (
+        patch("aiohttp.ClientSession.post", side_effect=exc),
+        pytest.raises(bravia_exc),
+    ):
         await client.send_req(client._base_url / "test")
 
 
@@ -261,7 +256,7 @@ async def test_send_req_exc(
     ],
 )
 async def test_playback_control(
-    client: BraviaClient, mock_aioresponse: aioresponses, cmd: str, method: str
+    client: BraviaClient, mock_http: aiointercept, cmd: str, method: str
 ) -> None:
     """Test playback control command."""
     client._commands = {cmd: f"test_{method}"}
@@ -275,10 +270,10 @@ async def test_playback_control(
     mock_send_ircc_req.assert_called_with(f"test_{method}")
 
 
-async def test_stop(client: BraviaClient, mock_aioresponse: aioresponses) -> None:
+async def test_stop(client: BraviaClient, mock_http: aiointercept) -> None:
     """Test stop command when the list of available commands is empty."""
     test_code = "test_stop_code"
-    mock_aioresponse.post(
+    mock_http.post(
         f"http://{TEST_HOST}/sony/{SERVICE_SYSTEM}",
         payload={
             "result": [
@@ -294,16 +289,16 @@ async def test_stop(client: BraviaClient, mock_aioresponse: aioresponses) -> Non
 
     assert result is True
 
-    kwargs0 = list(mock_aioresponse.requests.values())[0][0].kwargs
-    assert kwargs0["json"]["method"] == "getRemoteControllerInfo"
-    assert kwargs0["json"]["params"] == []
+    payload = await next(iter(mock_http.requests.values()))[0].json()
+    assert payload["method"] == "getRemoteControllerInfo"
+    assert payload["params"] == []
 
     mock_send_ircc_req.assert_called_with(test_code)
 
 
-async def test_reboot(client: BraviaClient, mock_aioresponse: aioresponses) -> None:
+async def test_reboot(client: BraviaClient, mock_http: aiointercept) -> None:
     """Test reboot sends command."""
-    mock_aioresponse.post(
+    mock_http.post(
         f"http://{TEST_HOST}/sony/{SERVICE_SYSTEM}",
         payload={"result": []},
     )
@@ -312,16 +307,14 @@ async def test_reboot(client: BraviaClient, mock_aioresponse: aioresponses) -> N
 
     assert result is True
 
-    kwargs = list(mock_aioresponse.requests.values())[0][0].kwargs
-    assert kwargs["json"]["method"] == "requestReboot"
-    assert kwargs["json"]["params"] == []
+    payload = await next(iter(mock_http.requests.values()))[0].json()
+    assert payload["method"] == "requestReboot"
+    assert payload["params"] == []
 
 
-async def test_terminate_apps(
-    client: BraviaClient, mock_aioresponse: aioresponses
-) -> None:
+async def test_terminate_apps(client: BraviaClient, mock_http: aiointercept) -> None:
     """Test terminate_apps sends command."""
-    mock_aioresponse.post(
+    mock_http.post(
         f"http://{TEST_HOST}/sony/{SERVICE_APP_CONTROL}",
         payload={"result": []},
     )
@@ -330,16 +323,14 @@ async def test_terminate_apps(
 
     assert result is True
 
-    kwargs = list(mock_aioresponse.requests.values())[0][0].kwargs
-    assert kwargs["json"]["method"] == "terminateApps"
-    assert kwargs["json"]["params"] == []
+    payload = await next(iter(mock_http.requests.values()))[0].json()
+    assert payload["method"] == "terminateApps"
+    assert payload["params"] == []
 
 
-async def test_set_text_form(
-    client: BraviaClient, mock_aioresponse: aioresponses
-) -> None:
+async def test_set_text_form(client: BraviaClient, mock_http: aiointercept) -> None:
     """Test set_text_form sends text input."""
-    mock_aioresponse.post(
+    mock_http.post(
         f"http://{TEST_HOST}/sony/{SERVICE_APP_CONTROL}",
         payload={"result": []},
     )
@@ -348,9 +339,9 @@ async def test_set_text_form(
 
     assert result is True
 
-    kwargs = list(mock_aioresponse.requests.values())[0][0].kwargs
-    assert kwargs["json"]["method"] == "setTextForm"
-    assert kwargs["json"]["params"] == ["test text"]
+    payload = await next(iter(mock_http.requests.values()))[0].json()
+    assert payload["method"] == "setTextForm"
+    assert payload["params"] == ["test text"]
 
 
 @pytest.mark.parametrize(
@@ -362,13 +353,13 @@ async def test_set_text_form(
 )
 async def test_volume_up_down(
     client: BraviaClient,
-    mock_aioresponse: aioresponses,
+    mock_http: aiointercept,
     method: str,
     step: int,
     expected_param: str,
 ) -> None:
     """Test volume_up and volume_down methods."""
-    mock_aioresponse.post(
+    mock_http.post(
         f"http://{TEST_HOST}/sony/audio",
         payload={"result": []},
     )
@@ -378,16 +369,14 @@ async def test_volume_up_down(
 
     assert result is True
 
-    kwargs = list(mock_aioresponse.requests.values())[0][0].kwargs
-    assert kwargs["json"]["method"] == "setAudioVolume"
-    assert kwargs["json"]["params"] == [{"target": "speaker", "volume": expected_param}]
+    payload = await next(iter(mock_http.requests.values()))[0].json()
+    assert payload["method"] == "setAudioVolume"
+    assert payload["params"] == [{"target": "speaker", "volume": expected_param}]
 
 
-async def test_volume_level(
-    client: BraviaClient, mock_aioresponse: aioresponses
-) -> None:
+async def test_volume_level(client: BraviaClient, mock_http: aiointercept) -> None:
     """Test volume_level sets absolute volume."""
-    mock_aioresponse.post(
+    mock_http.post(
         f"http://{TEST_HOST}/sony/audio",
         payload={"result": []},
     )
@@ -396,16 +385,16 @@ async def test_volume_level(
 
     assert result is True
 
-    kwargs = list(mock_aioresponse.requests.values())[0][0].kwargs
-    assert kwargs["json"]["method"] == "setAudioVolume"
-    assert kwargs["json"]["params"] == [{"target": "speaker", "volume": "25"}]
+    payload = await next(iter(mock_http.requests.values()))[0].json()
+    assert payload["method"] == "setAudioVolume"
+    assert payload["params"] == [{"target": "speaker", "volume": "25"}]
 
 
 async def test_volume_level_with_ui_mode(
-    client: BraviaClient, mock_aioresponse: aioresponses
+    client: BraviaClient, mock_http: aiointercept
 ) -> None:
     """Test volume_level with UI mode parameter."""
-    mock_aioresponse.post(
+    mock_http.post(
         f"http://{TEST_HOST}/sony/audio",
         payload={"result": []},
     )
@@ -414,18 +403,16 @@ async def test_volume_level_with_ui_mode(
 
     assert result is True
 
-    kwargs = list(mock_aioresponse.requests.values())[0][0].kwargs
-    assert kwargs["json"]["method"] == "setAudioVolume"
-    assert kwargs["json"]["params"] == [
-        {"target": "speaker", "volume": "30", "ui": "on"}
-    ]
+    payload = await next(iter(mock_http.requests.values()))[0].json()
+    assert payload["method"] == "setAudioVolume"
+    assert payload["params"] == [{"target": "speaker", "volume": "30", "ui": "on"}]
 
 
 async def test_volume_mute_explicit(
-    client: BraviaClient, mock_aioresponse: aioresponses
+    client: BraviaClient, mock_http: aiointercept
 ) -> None:
     """Test volume_mute with explicit mute value."""
-    mock_aioresponse.post(
+    mock_http.post(
         f"http://{TEST_HOST}/sony/audio",
         payload={"result": []},
     )
@@ -434,16 +421,16 @@ async def test_volume_mute_explicit(
 
     assert result is True
 
-    kwargs = list(mock_aioresponse.requests.values())[0][0].kwargs
-    assert kwargs["json"]["method"] == "setAudioMute"
-    assert kwargs["json"]["params"] == [{"status": True}]
+    payload = await next(iter(mock_http.requests.values()))[0].json()
+    assert payload["method"] == "setAudioMute"
+    assert payload["params"] == [{"status": True}]
 
 
 async def test_volume_mute_toggle(
-    client: BraviaClient, mock_aioresponse: aioresponses
+    client: BraviaClient, mock_http: aiointercept
 ) -> None:
     """Test volume_mute toggles mute status."""
-    mock_aioresponse.post(
+    mock_http.post(
         f"http://{TEST_HOST}/sony/audio",
         payload={
             "result": [
@@ -459,7 +446,7 @@ async def test_volume_mute_toggle(
             ]
         },
     )
-    mock_aioresponse.post(
+    mock_http.post(
         f"http://{TEST_HOST}/sony/audio",
         payload={"result": []},
     )
@@ -468,31 +455,31 @@ async def test_volume_mute_toggle(
 
     assert result is True
 
-    requests = list(mock_aioresponse.requests.values())
-    kwargs = requests[0][0].kwargs
-    assert kwargs["json"]["method"] == "getVolumeInformation"
+    requests = list(mock_http.requests.values())
+    payload = await requests[0][0].json()
+    assert payload["method"] == "getVolumeInformation"
 
-    kwargs = requests[0][1].kwargs
-    assert kwargs["json"]["method"] == "setAudioMute"
-    assert kwargs["json"]["params"] == [{"status": True}]
+    payload = await requests[0][1].json()
+    assert payload["method"] == "setAudioMute"
+    assert payload["params"] == [{"status": True}]
 
 
-async def test_turn_on(client: BraviaClient, mock_aioresponse: aioresponses) -> None:
+async def test_turn_on(client: BraviaClient, mock_http: aiointercept) -> None:
     """Test turn_on sends WOL and power commands."""
-    mock_aioresponse.post(
+    mock_http.post(
         f"http://{TEST_HOST}/sony/{SERVICE_SYSTEM}",
         payload={"result": [{"status": "standby"}], "id": 1},
     )
-    mock_aioresponse.post(
+    mock_http.post(
         f"http://{TEST_HOST}/sony/{SERVICE_SYSTEM}",
         payload={"result": [], "id": 1},
     )
-    mock_aioresponse.post(
+    mock_http.post(
         f"http://{TEST_HOST}/sony/IRCC",
         body="OK",
         status=200,
     )
-    mock_aioresponse.post(
+    mock_http.post(
         f"http://{TEST_HOST}/sony/IRCC",
         body="OK",
         status=200,
@@ -504,30 +491,30 @@ async def test_turn_on(client: BraviaClient, mock_aioresponse: aioresponses) -> 
     assert result is True
     mock_wol.assert_called_once()
 
-    requests = list(mock_aioresponse.requests.values())
+    requests = list(mock_http.requests.values())
 
-    kwargs = requests[0][0].kwargs
-    assert kwargs["json"]["method"] == "getPowerStatus"
+    payload = await requests[0][0].json()
+    assert payload["method"] == "getPowerStatus"
 
-    kwargs = requests[0][1].kwargs
-    assert kwargs["json"]["method"] == "setPowerStatus"
-    assert kwargs["json"]["params"] == [{"status": True}]
+    payload = await requests[0][1].json()
+    assert payload["method"] == "setPowerStatus"
+    assert payload["params"] == [{"status": True}]
 
     # Empty request to 'wake up' the API
-    kwargs = requests[1][0].kwargs
-    assert "<IRCCCode></IRCCCode>" in kwargs["data"]
+    body = requests[1][0].captured_body.decode()
+    assert "<IRCCCode></IRCCCode>" in body
 
-    kwargs = requests[1][1].kwargs
-    assert f"<IRCCCode>{CODE_POWER_ON}</IRCCCode>" in kwargs["data"]
+    body = requests[1][1].captured_body.decode()
+    assert f"<IRCCCode>{CODE_POWER_ON}</IRCCCode>" in body
 
 
-async def test_turn_off(client: BraviaClient, mock_aioresponse: aioresponses) -> None:
+async def test_turn_off(client: BraviaClient, mock_http: aiointercept) -> None:
     """Test turn_off sends power off command."""
-    mock_aioresponse.post(
+    mock_http.post(
         f"http://{TEST_HOST}/sony/{SERVICE_SYSTEM}",
         payload={"result": [], "id": 1},
     )
-    mock_aioresponse.post(
+    mock_http.post(
         f"http://{TEST_HOST}/sony/{SERVICE_SYSTEM}",
         payload={"error": [400, "not power-on"], "id": 1},
     )
@@ -538,9 +525,9 @@ async def test_turn_off(client: BraviaClient, mock_aioresponse: aioresponses) ->
     assert result is True
     assert already_off_result is True
 
-    requests = next(iter(mock_aioresponse.requests.values()))
+    requests = next(iter(mock_http.requests.values()))
     assert len(requests) == 2
 
-    kwargs = requests[0].kwargs
-    assert kwargs["json"]["method"] == "setPowerStatus"
-    assert kwargs["json"]["params"] == [{"status": False}]
+    payload = await requests[0].json()
+    assert payload["method"] == "setPowerStatus"
+    assert payload["params"] == [{"status": False}]

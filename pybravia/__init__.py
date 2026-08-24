@@ -12,8 +12,8 @@ from .exceptions import (
 )
 
 __all__ = [
-    "BraviaClient",
     "BraviaAuthError",
+    "BraviaClient",
     "BraviaConnectionError",
     "BraviaConnectionTimeout",
     "BraviaError",
