@@ -250,7 +250,7 @@ class BraviaClient:
         # The endpoint of some TVs is case sensitive, this also detects this.
         # https://github.com/home-assistant/core/issues/86132
         if code != "":
-            time = datetime.now()  # noqa: DTZ005
+            time = datetime.now()
             if not self._ircc_time or (time - self._ircc_time) > timedelta(minutes=10):
                 try:
                     await self.send_ircc_req("")
