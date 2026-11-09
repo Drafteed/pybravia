@@ -20,9 +20,9 @@ source = "https://github.com/Drafteed/pybravia"
 
 [dependency-groups]
 dev = [
-  "ruff==0.17.3",
-  "prek==0.5.7",
-  "ty==0.0.95",
+  "ruff==0.17.4",
+  "prek==0.5.10",
+  "ty==0.0.98",
 ]
 test = [
   "pytest==9.2.0",
@@ -52,7 +52,7 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 
 [tool.ty.rules]
-unresolved-import = "warn"
+import-not-found = "warn"
 
 [tool.ty.src]
 exclude = ["tests"]
