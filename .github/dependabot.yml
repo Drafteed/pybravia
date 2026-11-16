@@ -50,5 +50,5 @@ updates:
     directory: "/"
     patterns:
       - "*/astral-sh/ruff-pre-commit"
-      - "*/NSPBot911/ty-pre-commit"
+      - "*/astral-sh/ty-pre-commit"
     multi-ecosystem-group: "dev"
