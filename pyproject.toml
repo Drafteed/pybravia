@@ -22,7 +22,7 @@ source = "https://github.com/Drafteed/pybravia"
 dev = [
   "ruff==0.17.5",
   "prek==0.5.10",
-  "ty==0.0.102",
+  "ty==0.0.103",
 ]
 test = [
   "pytest==9.2.0",
