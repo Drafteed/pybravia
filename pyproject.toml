@@ -20,9 +20,9 @@ source = "https://github.com/Drafteed/pybravia"
 
 [dependency-groups]
 dev = [
-  "ruff==0.17.5",
-  "prek==0.5.10",
-  "ty==0.0.103",
+  "ruff==0.17.6",
+  "prek==0.5.11",
+  "ty==0.0.107",
 ]
 test = [
   "pytest==9.2.0",
